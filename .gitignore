@@ -1,0 +1,25 @@
+# Environment
+.env
+
+# Logs
+logs/*.log
+logs/*.log.*
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.env
+
+# System
+.DS_Store
+Thumbs.db
+
+# Backup & temp
+*.bak
+*.tmp
+
+# Dokumentasi internal (opsional)
+docs/API.md
+docs/ARCHITECTURE.md
+docs/MAINTENANCE.md
