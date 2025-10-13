@@ -1,54 +1,58 @@
 # app/app.py
 import os
-from flask import Flask, render_template
+import sys
 import logging
 from logging.handlers import RotatingFileHandler
+from flask import Flask, render_template
 from dotenv import load_dotenv
 
-# Load environment variables
 load_dotenv()
 
+# Fail-fast config validation
+import app.config  
+from app.rag_initializer import get_runtime_components
+
+
+
 def create_app():
-    # Get the root directory of the project
-    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    app = Flask(__name__) 
     
-    app = Flask(__name__, 
-                template_folder=os.path.join(root_dir, 'templates'),
-                static_folder=os.path.join(root_dir, 'static'))
-    app.secret_key = os.getenv('FLASK_SECRET_KEY')
+    @app.route('/')
+    def index():
+        return render_template('index.html')
+    # app/app.py
 
-    # === SETUP LOGGING ===
-    log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'logs')
-    os.makedirs(log_dir, exist_ok=True)
+    @app.route('/widget')
+    def widget():
+        return render_template('widget.html')
+    if not app.debug and not app.testing:
+        os.makedirs('logs', exist_ok=True)
+        file_handler = RotatingFileHandler('logs/chatbot.log', maxBytes=10240000, backupCount=10)
+        file_handler.setFormatter(logging.Formatter(
+            '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+        ))
+        file_handler.setLevel(logging.INFO)
+        app.logger.addHandler(file_handler)
+        app.logger.setLevel(logging.INFO)
 
-    # Handler untuk chatbot.log (rotasi 10 MB, simpan 5 file)
-    file_handler = RotatingFileHandler(
-        os.path.join(log_dir, 'chatbot.log'),
-        maxBytes=10*1024*1024,  # 10 MB
-        backupCount=5
-    )
-    file_handler.setFormatter(logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    ))
-    file_handler.setLevel(logging.INFO)
-    app.logger.addHandler(file_handler)
-    app.logger.setLevel(logging.INFO)
+    # --- RAG Initialization (Graceful Degradation) ---
+    app.rag_clients = None
+    try:
+        app.rag_clients = get_runtime_components()
+        app.logger.info("RAG system online")
+    except Exception as e:
+        app.logger.warning(f"RAG system offline: {e}")
 
-    # === Register API Blueprints ===
-    from app.api import chat_bp, health_bp
+    # --- Blueprints ---
+    from app.api import chat_bp, health_bp, admin_bp
     app.register_blueprint(chat_bp)
     app.register_blueprint(health_bp)
+    app.register_blueprint(admin_bp)
 
-    # === Frontend Route ===
-    @app.route('/')
-    def home():
-        return render_template('index.html')
-
+    app.logger.info("Application started")
     return app
 
-# Entry point for Gunicorn
 application = create_app()
 
 if __name__ == '__main__':
-    debug_mode = os.getenv('FLASK_ENV', 'production') != 'production'
-    application.run(debug=debug_mode, host='0.0.0.0', port=5000)
+    application.run(debug=True, host='0.0.0.0', port=5000)

@@ -3,43 +3,61 @@ import redis
 import json
 import time
 import hashlib
-from app.config import REDIS_URL
+import logging
+from app.config import settings
+
+logger = logging.getLogger(__name__)
+# --- Inisialisasi Global ---
+redis_client = None
+REDIS_AVAILABLE = False  # ← DIDEKLARASIKAN DI SINI
 
 try:
-    redis_client = redis.from_url(REDIS_URL, decode_responses=True)
-    # Test connection
+    redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)
     redis_client.ping()
-    REDIS_AVAILABLE = True
+    logger.info("Redis connected")
 except Exception as e:
-    print(f"Redis not available: {e}")
+    logger.error(f"Redis unavailable: {e}")
     redis_client = None
-    REDIS_AVAILABLE = False
 
+def _safe_redis_call(func):
+    """Decorator untuk aman panggil Redis."""
+    def wrapper(*args, **kwargs):
+        if redis_client is None:
+            return None if func.__name__ != 'save_history' else None
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            logger.warning(f"Redis call failed in {func.__name__}: {e}")
+            return [] if 'get' in func.__name__ else None
+    return wrapper
+
+@_safe_redis_call
 def get_history(user_id, limit=5):
-    if not REDIS_AVAILABLE:
-        return []
     key = f"chat:{user_id}"
     raw = redis_client.lrange(key, 0, limit - 1)
-    return [json.loads(item) for item in raw]
+    return [json.loads(item) for item in reversed(raw)]
 
+@_safe_redis_call
 def save_history(user_id, user_msg, bot_msg):
-    if not REDIS_AVAILABLE:
-        return
     key = f"chat:{user_id}"
     item = json.dumps({'user': user_msg, 'ai': bot_msg, 'ts': time.time()})
-    redis_client.lpush(key, item)
-    redis_client.ltrim(key, 0, 9)
-    redis_client.expire(key, 1800)
+    pipe = redis_client.pipeline()
+    pipe.lpush(key, item)
+    pipe.ltrim(key, 0, 9)
+    pipe.expire(key, 1800, nx=True)
+    pipe.execute()
 
+def _generate_cache_key(query: str) -> str:
+    version = f"{settings.RAG.EMBEDDING_MODEL_NAME}:{settings.RAG.COLLECTION_NAME}"
+    combined = f"{query}:{version}"
+    return f"rag:resp:{hashlib.sha256(combined.encode()).hexdigest()}"
+
+@_safe_redis_call
 def get_cached_response(query: str):
-    if not REDIS_AVAILABLE:
-        return None
-    cache_key = f"rag:resp:{hashlib.md5(query.encode()).hexdigest()}"
-    cached = redis_client.get(cache_key)
-    return cached if cached else None
+    return redis_client.get(_generate_cache_key(query))
 
+@_safe_redis_call
 def cache_response(query: str, response: str, ttl: int = 3600):
-    if not REDIS_AVAILABLE:
-        return
-    cache_key = f"rag:resp:{hashlib.md5(query.encode()).hexdigest()}"
-    redis_client.setex(cache_key, ttl, response)
+    redis_client.setex(_generate_cache_key(query), ttl, response)
+
+__all__ = ['redis_client', 'REDIS_AVAILABLE', 'get_history', 'save_history', 'get_cached_response', 'cache_response']

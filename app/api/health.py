@@ -5,38 +5,43 @@ Health check endpoints for monitoring and readiness probes.
 
 from flask import jsonify
 from . import health_bp
-import redis
-from app.config import REDIS_URL
-from qdrant_client import QdrantClient
-import os
+from app.config import settings
+from app.redis_manager import redis_client, REDIS_AVAILABLE
+from app.rag_initializer import get_runtime_components
 
 @health_bp.route('/health', methods=['GET'])
 def health_check():
-    """Liveness & readiness probe - cek koneksi ke dependensi kritis."""
+    """Liveness & readiness probe using actual application clients."""
     checks = {
-        'flask': True,
-        'redis': False,
-        'qdrant': False
+        'app': 'ok',
+        'redis': 'unknown',
+        'qdrant': 'unknown'
     }
 
-    # Cek Redis
-    try:
-        r = redis.from_url(REDIS_URL)
-        r.ping()
-        checks['redis'] = True
-    except Exception as e:
-        checks['redis_error'] = str(e)
+    # --- Cek Redis (gunakan klien yang sama dengan aplikasi) ---
+    if REDIS_AVAILABLE and redis_client is not None:
+        try:
+            redis_client.ping()
+            checks['redis'] = 'ok'
+        except Exception as e:
+            checks['redis'] = 'down'
+            checks['redis_error'] = str(e)
+    else:
+        checks['redis'] = 'disabled'
 
-    # Cek Qdrant
+    # --- Cek Qdrant (gunakan klien dari rag_initializer) ---
     try:
-        client = QdrantClient(
-            url=os.getenv('QDRANT_URL', 'http://localhost:6333'),
-            api_key=os.getenv('QDRANT_API_KEY', None)
-        )
-        client.get_collections()
-        checks['qdrant'] = True
+        rag = get_runtime_components()
+        qdrant_client = rag['qdrant_client']
+        qdrant_client.get_collections()  # ringan, tidak berat
+        checks['qdrant'] = 'ok'
     except Exception as e:
+        checks['qdrant'] = 'down'
         checks['qdrant_error'] = str(e)
 
-    status = 200 if all(checks[key] for key in ['flask', 'redis', 'qdrant']) else 503
-    return jsonify(checks), status
+    # --- Status HTTP ---
+    # Redis opsional, jadi hanya Qdrant + App yang wajib
+    healthy = (checks['qdrant'] == 'ok')
+    status_code = 200 if healthy else 503
+
+    return jsonify(checks), status_code
