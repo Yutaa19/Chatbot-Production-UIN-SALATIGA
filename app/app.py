@@ -9,22 +9,24 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Fail-fast config validation
-import app.config  
+from app.config import settings
 from app.rag_initializer import get_runtime_components
 
 
 
 def create_app():
-    app = Flask(__name__) 
-    
-    @app.route('/')
-    def index():
-        return render_template('index.html')
-    # app/app.py
+    ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-    @app.route('/widget')
+    app = Flask(__name__, 
+                # Tentukan lokasi folder templates secara eksplisit
+                template_folder=os.path.join(ROOT_DIR, 'templates'), 
+                static_folder=os.path.join(ROOT_DIR, 'static'))
+
+    app.secret_key = settings.FLASK_SECRET_KEY
+
+    @app.route('/')
     def widget():
-        return render_template('widget.html')
+        return render_template('wigdet.html')
     if not app.debug and not app.testing:
         os.makedirs('logs', exist_ok=True)
         file_handler = RotatingFileHandler('logs/chatbot.log', maxBytes=10240000, backupCount=10)
@@ -46,8 +48,8 @@ def create_app():
     # --- Blueprints ---
     from app.api import chat_bp, health_bp, admin_bp
     app.register_blueprint(chat_bp)
-    app.register_blueprint(health_bp)
-    app.register_blueprint(admin_bp)
+    app.register_blueprint(health_bp)  # tetap di /health
+    app.register_blueprint(admin_bp)   # tetap di /admin
 
     app.logger.info("Application started")
     return app

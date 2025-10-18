@@ -1,16 +1,26 @@
-# app/core/main.py
 import re
 import logging
+import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
-from qdrant_client.http import models
-import google.generativeai as genai
-from app.config import settings # <-- AMBIL KONFIGURASI DARI SINI
+
+# --- Google Generative AI SDK (Resmi & Terbaru) ---
+from google import genai
+from google.genai import types
+
+
+import google.generativeai as genai 
+from google.genai.types import HarmCategory, HarmBlockThreshold, GenerateContentConfig
+
+# --- Konfigurasi & Komponen Internal ---
+from app.config import settings
+from app.rag_initializer import get_runtime_components
 
 logger = logging.getLogger(__name__)
 
-# Import klien yang sudah diinisialisasi dari initializer
-from app.rag_initializer import get_runtime_components
 
+# ===================================================================
+# 1. PREPROCESSING QUERY (Bahasa Indonesia)
+# ===================================================================
 # Fungsi preprocessing query
 def preprocess_query(query):
     """
@@ -50,139 +60,290 @@ def preprocess_query(query):
     
     return ' '.join(processed_words)
 
-# 6. Improved Similarity Search dengan preprocessing
-def search_qdrant(query, client, collection_name, embedder, top_k=3):
-    logger.info(f"\n[6] Improved similarity search untuk query: '{query}'")
 
+# ===================================================================
+# 2. GOOGLE SEARCH TOOL (Untuk Tool Use)
+# ===================================================================
+def _google_search_tool(query: str) -> str:
+    """
+    Tool eksternal: Google Search.
+    Ganti dengan integrasi nyata di production (misal: Google Programmable Search Engine).
+    """
+    logger.info(f"[TOOL] Google Search dipanggil untuk: '{query}'")
+    
+    # 🔁 STUB DEVELOPMENT — GANTI DI PRODUCTION
+    return (
+        f"Di lingkungan production, sistem akan mencari informasi terkini tentang '{query}' "
+        f"melalui Google Search dan memberikan jawaban berbasis hasil tersebut."
+    )
+
+
+# ===================================================================
+# 3. RAG: PENCARIAN DI QDRANT
+# ===================================================================
+def search_qdrant(query: str, top_k: int = 3):
+    """
+    Cari dokumen relevan di Qdrant dengan preprocessing, embedding, dan validasi vektor.
+    Mengembalikan: List[{'text': str, 'score': float}]
+    """
+    logger.info(f"[RAG] Mencari dokumen untuk query: '{query}'")
+    
     try:
         rag = get_runtime_components()
-        client = rag['qdrant_client']
-        embedder = rag['embedder']
-        collection_name = rag['collection_name']
+        client = rag["qdrant_client"]
+        embedder = rag["embedder"]
+        collection_name = rag["collection_name"]
     except Exception as e:
-        logger.error(f"[RAG] Failed to load RAG components: {e}")
-        return []    
+        logger.error(f"[RAG] Gagal memuat komponen RAG: {e}")
+        return []
+
     try:
-        # Step 1: Preprocess query
+        # Preprocess & encode
         processed_query = preprocess_query(query)
-        logger.info(f"Query processed: '{processed_query}'")
-        
-        # Step 2: Generate embedding
-        query_embedding = embedder.encode([processed_query])[0]
-        
-        # Step 3: Search dengan top_k yang lebih besar untuk filtering
-        results = client.search(
+        query_vec = embedder.encode(
+            [processed_query],
+            normalize_embeddings=True,
+            convert_to_numpy=True
+        )[0]
+
+        # Ambil kandidat dari Qdrant
+        hits = client.search(
             collection_name=collection_name,
-            query_vector=query_embedding,
-            limit=top_k,
+            query_vector=query_vec.tolist(),
+            limit=top_k * 2,  # Ambil lebih banyak untuk fleksibilitas
+            with_payload=True,
             with_vectors=True
         )
-        
-        # Step 4: Reranking berdasarkan cosine similarity yang lebih akurat
-        if results:
-            # Hitung ulang similarity untuk reranking
-            vektor_chunks = [hit.vector for hit in results]
-            
-            # Hitung cosine similarity
-            similarities = cosine_similarity([query_embedding], vektor_chunks)[0]
-            
-            # Reranking berdasarkan similarity score
-            reranked_results = []
-            for i, hit in enumerate(results):
-                reranked_results.append({
-                    'text': hit.payload["text"],
-                    'score': similarities[i],
-                    'original_score': hit.score
-                })
-            
-            # Sort berdasarkan similarity score tertinggi
-            reranked_results.sort(key=lambda x: x['score'], reverse=True)
-            
-            # Ambil top_k terbaik
-            final_results = [item['text'] for item in reranked_results[:top_k]]
-            
-            logger.info(f"Ditemukan {len(final_results)} chunks relevan setelah reranking.")
-            logger.info(f"Similarity scores: {[round(item['score'], 3) for item in reranked_results[:top_k]]}")
-            
-            return final_results
+
+        if not hits:
+            return []
+
+        # Filter dokumen valid
+        texts, vectors = [], []
+        for hit in hits:
+            text = hit.payload.get("text", "").strip()
+            vector = hit.vector
+            if not text or vector is None:
+                continue
+            if np.any(np.isnan(vector)):
+                logger.warning("Melewati dokumen dengan vektor NaN")
+                continue
+            texts.append(text)
+            vectors.append(vector)
+
+        if not vectors:
+            return []
+
+        # Hitung cosine similarity
+        vectors = np.array(vectors)
+        sims = cosine_similarity([query_vec], vectors)[0]
+
+        # Bangun hasil
+        results = [
+            {"text": text, "score": float(sim)}
+            for text, sim in zip(texts, sims)
+        ]
+        results.sort(key=lambda x: x["score"], reverse=True)
+
+        # Ambil top_k terbaik
+        final_results = results[:top_k]
+        logger.info(f"[RAG] Skor relevansi: {[round(r['score'], 3) for r in final_results]}")
+        return final_results
+
     except Exception as e:
-        logger.error(f"Gagal melakukan pencarian di Qdrant: {e}")
+        logger.error(f"[RAG] Error saat pencarian: {e}", exc_info=True)
         return []
 
 
+# ===================================================================
+# 4. KONSTRUKSI PROMPT
+# ===================================================================
+def construct_prompt(user_query: str, rag_context: str = "", conversation_history: str = "") -> tuple[str, str]:
+    """
+    Bangun system prompt dan user prompt untuk LLM.
+    """
+    system_prompt = (
+        "Anda adalah Customer Service resmi Kampus UIN Salatiga. "
+        "Jawab dengan profesional, ramah, sopan, dan akurat. "
+        "1. Jika ada KONTEKS INTERNAL, gunakan hanya informasi tersebut. "
+        "2. Jika tidak ada konteks, gunakan Google Search untuk mencari informasi terkini. "
+        "3. Jangan mengarang, jangan menyebut proses teknis, dan batasi jawaban maksimal 2 kalimat."
+    )
 
-def construct_prompt(query, retrieved_chunks, conversation_history=""):
-        """
-        Membangun prompt untuk LLM dengan konteks dokumen DAN riwayat percakapan.
+    parts = []
+    if conversation_history.strip():
+        parts.append(f"RIWAYAT PERCAKAPAN:\n{conversation_history}")
+    if rag_context.strip():
+        parts.append(f"KONTEKS INTERNAL:\n{rag_context}")
+    else:
+        parts.append("KONTEKS INTERNAL: Tidak tersedia.")
+    parts.append(f"PERTANYAAN USER:\n{user_query}")
+
+    user_prompt = "\n\n".join(parts)
+    return system_prompt, user_prompt
+
+
+# ===================================================================
+# 5. FUNGSI UTAMA: ORKESTRATOR LLM (RAG + GOOGLE SEARCH)
+# ===================================================================
+
+# Pastikan Anda mengimpor 'requests' dan 'os' di bagian atas file
+import requests
+import os
+
+GOOGLE_SEARCH_API_KEY = settings.GOOGLE_SEARCH_API_KEY
+SEARCH_ENGINE_ID = settings.SEARCH_ENGINE_ID
+
+def search_google(query: str) -> dict: # <-- UBAH TIPE OUTPUT MENJADI DICT
+    """
+    Melakukan pencarian di Google dan mengembalikan hasil terstruktur
+    sebagai DICTIONARY agar kompatibel dengan FunctionResponse.
+    """
+    if not GOOGLE_SEARCH_API_KEY or not SEARCH_ENGINE_ID:
+        logger.error("[TOOL] API Key Google Search atau Search Engine ID tidak diatur.")
+        # Kembalikan dictionary error
+        return {"error": "Layanan pencarian tidak terkonfigurasi."}
+
+    url = "https://www.googleapis.com/customsearch/v1"
+    params = {
+        'key': GOOGLE_SEARCH_API_KEY,
+        'cx': SEARCH_ENGINE_ID,
+        'q': query,
+        'num': 3 # Ambil 3 hasil teratas
+    }
+    
+    try:
+        response = requests.get(url, params=params, timeout=5)
+        response.raise_for_status()
+        results = response.json()
         
-        Args:
-            query (str): Pertanyaan user saat ini
-            retrieved_chunks (list): Daftar teks dari hasil retrieval
-            conversation_history (str): Riwayat percakapan sebelumnya (opsional)
-        """
-        logger.info("\n[7] Membangun prompt...")
+        snippets_list = []
+        if 'items' in results:
+            for item in results.get('items', []):
+                # Buat dictionary untuk setiap hasil
+                snippets_list.append({
+                    "snippet": item.get('snippet', 'Tidak ada snippet.'),
+                    "source_title": item.get('title', 'Tanpa Judul'),
+                    "url": item.get('link', '')
+                })
         
-        context = "\n\n".join(retrieved_chunks)
-    # Jika ada riwayat, sisipkan; jika tidak, kosongkan
-        history_section = f"=== RIWAYAT PERCAKAPAN ===\n{conversation_history}\n" if conversation_history.strip() else ""
-        system_prompt = (
-        "Anda adalah UINSAGA-AI, asisten resmi UIN Salatiga. "
-        "Jawab hanya berdasarkan konteks yang diberikan. "
-        "Jika informasi tidak tersedia, katakan: "
-        "'Maaf, saya tidak menyajikan informasi ini.Silakan kunjungi uin-salatiga.ac.id untuk info lebih lengkap.' "
-        "Sesuaikan gaya bahasa: formal untuk dosen/karyawan, bahasa gen z untuk mahasiswa / calon mahasiswa. "
-        "Jawaban harus singkat (maks 2 kalimat), langsung ke inti, dan tidak berulang. "
-        "Jangan gunakan salam berbasis waktu dan gunakan sapaan yang sopan dan ramah hanya di awal percakapan."
-        )
-        user_prompt = f"""
-    Pertanyaan user:
-    {query}
+        if not snippets_list:
+            # Kembalikan dictionary "tidak ditemukan"
+            return {"status": "not_found", "message": "Tidak ada hasil pencarian yang relevan."}
+            
+        # --- PERUBAHAN KRITIS ---
+        # Kembalikan dictionary yang berisi list hasil
+        return {"status": "success", "results": snippets_list}
+        
+    except requests.exceptions.RequestException as e:
+        logger.error(f"[TOOL] Error saat memanggil Google Search API: {e}")
+        return {"error": f"Error saat menghubungi layanan pencarian: {e}"}
 
-    Riwayat percakapan sebelumnya (jika ada):
-    {history_section}
+# ... (Kode di atas tetap sama) ...
 
-    Konteks dokumen:
-    {context}
-
-    Jawablah dengan gaya asisten UIN Salatiga sesuai instruksi di atas."
+# Asumsi: settings, logger, dan fungsi search_google sudah didefinisikan di atas
+def ask_gemini(
+    system_prompt: str,
+    user_prompt: str,
+    rag_context: str = "",
+    enable_google_search: bool = False,
+) -> str:
     """
-        logger.info("Prompt berhasil dibuat.")
-        return system_prompt, user_prompt
-
-
-
-def ask_gemini(system_prompt: str, user_prompt: str) -> str:
+    Menggunakan 'generate_content' (stateless) dengan riwayat (history)
+    yang HANYA berisi format 'dict' murni untuk menghindari error serialisasi.
     """
-    Kirim prompt ke Google Gemini.
-    """
-    logger.info(f"[LLM] Calling {settings.GEMINI_MODEL_NAME}...")
+    logger.info(f"[LLM] Memanggil {settings.GEMINI_MODEL_NAME}. Custom Search: {enable_google_search}")
+
+    # --- 1. Tools & Model Initialization (Sudah Benar) ---
+    tools = [search_google] if enable_google_search else []
+    model = genai.GenerativeModel(
+        model_name=settings.GEMINI_MODEL_NAME,
+        system_instruction=system_prompt,
+        tools=tools,
+        safety_settings={
+             types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: types.HarmBlockThreshold.BLOCK_NONE,
+             types.HarmCategory.HARM_CATEGORY_HARASSMENT: types.HarmBlockThreshold.BLOCK_NONE,
+             types.HarmCategory.HARM_CATEGORY_HATE_SPEECH: types.HarmBlockThreshold.BLOCK_NONE,
+             types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: types.HarmBlockThreshold.BLOCK_NONE,
+        }
+    )
+    generation_config = genai.GenerationConfig(
+        temperature=0.2,
+        max_output_tokens=2048,
+    )
+
+    # --- 2. Bangun Riwayat (Format dict) ---
+    prompt_to_send = []
+    if rag_context.strip() and rag_context != "Data internal tidak memuat informasi spesifik ini.":
+        prompt_to_send.append(f"KONTEKS RAG:\n---\n{rag_context}\n---")
+    prompt_to_send.append(f"PERTANYAAN USER:\n{user_prompt}")
+    
+    # 'history' adalah list yang HANYA berisi dict
+    history = [
+        {'role': 'user', 'parts': [{"text": "\n\n".join(prompt_to_send)}]}
+    ]
 
     try:
-        # ⚙️ Ambil model dari konfigurasi
-        genai.configure(api_key=settings.GEMINI_API_KEY)
-        model = genai.GenerativeModel(settings.GEMINI_MODEL_NAME)
-
-        full_prompt = f"{system_prompt}\n\n{user_prompt}"
-
+        # --- 3. Panggil Model (Stateless) ---
         response = model.generate_content(
-            full_prompt,
-            generation_config=genai.GenerationConfig(
-                max_output_tokens=256,
-                temperature=0.3,
-                top_p=0.9
-            ),
-            safety_settings={
-                "HARM_CATEGORY_HARASSMENT": "BLOCK_NONE",
-                "HARM_CATEGORY_HATE_SPEECH": "BLOCK_NONE",
-                "HARM_CATEGORY_SEXUALLY_EXPLICIT": "BLOCK_NONE",
-                "HARM_CATEGORY_DANGEROUS_CONTENT": "BLOCK_NONE"
-            }
+            history, # Kirim list [dict]
+            generation_config=generation_config
         )
 
-        answer = response.text.strip() if response.text else "Maaf, saya tidak dapat menjawab."
-        logger.info("[LLM] Response received.")
+        # --- 4. Loop Eksekusi Function Calling (Stateless) ---
+        while response.candidates[0].content.parts[0].function_call:
+            fc = response.candidates[0].content.parts[0].function_call
+            
+            # --- PERBAIKAN KRITIS 1: Konversi 'Content' object (permintaan model) ke 'dict' ---
+            model_request_dict = {
+                'role': 'model',
+                'parts': [
+                    # Ubah objek 'Part' menjadi 'dict'
+                    {'function_call': {'name': fc.name, 'args': dict(fc.args)}}
+                ]
+            }
+            history.append(model_request_dict)
+            # -------------------------------------------------------------------------
+
+            if fc.name == "search_google":
+                logger.info(f"[TOOL] Model meminta Google Search dengan query: {dict(fc.args)}")
+                
+                result_dict = search_google(**dict(fc.args)) # Ini dict, sudah benar
+                
+                # --- PERBAIKAN KRITIS 2: Konversi 'FunctionResponse' (jawaban kita) ke 'dict' ---
+                history.append({
+                    'role': 'function',
+                    'parts': [
+                        # Ubah objek 'types.FunctionResponse' menjadi 'dict'
+                        {'function_response': {'name': 'search_google', 'response': result_dict}}
+                    ]
+                })
+                # --------------------------------------------------------------------------
+
+                # Panggil model LAGI dengan riwayat [dict, dict, dict]
+                response = model.generate_content(
+                    history,
+                    generation_config=generation_config
+                )
+            else:
+                # ... (Handle fungsi tidak dikenal) ...
+                logger.error(f"Model meminta fungsi yang tidak dikenal: {fc.name}")
+                history.append({
+                    'role': 'function',
+                    'parts': [
+                        {'function_response': {'name': fc.name, 'response': {"error": "Fungsi tidak tersedia."}}}
+                    ]
+                })
+                response = model.generate_content(history, generation_config=generation_config)
+
+        # --- 5. Ambil Jawaban Final ---
+        answer = response.text.strip()
+        
+        if not answer:
+            return "Maaf, saya tidak dapat memberikan jawaban saat ini."
+            
         return answer
 
     except Exception as e:
-        logger.error(f"[LLM] Gemini call failed: {e}")
-        return "Maaf, sedanng terjadi fase pemeliharaan. Silakan coba lagi nanti."              
+        logger.error(f"[LLM] Error kritis: {e}", exc_info=True)
+        raise ConnectionError(f"Gagal memproses permintaan: {str(e)}")

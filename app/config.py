@@ -11,10 +11,13 @@ class RAGSettings(BaseSettings):
     QDRANT_URL: str
     QDRANT_API_KEY: str
     TOP_K_RETRIEVAL: int = Field(default=3)
-    COLLECTION_NAME: str = Field(default="my_pdf_collection")  # BENAR: di dalam RAGSettings
-
+    COLLECTION_NAME: str = Field(default="uin_knowledge_base") 
+    RAG_RELEVANCE_THRESHOLD: float = Field(default=0.8)  
 class AppConfig(BaseSettings):
     GEMINI_API_KEY: str
+    GEMINI_MODEL_NAME: str = Field(default="gemini-2.5-flash")
+    GOOGLE_SEARCH_API_KEY: str
+    SEARCH_ENGINE_ID: str
     REDIS_URL: str
     FLASK_SECRET_KEY: str = Field(min_length=16)
     ADMIN_SECRET_KEY: str = Field(min_length=16)

@@ -1,91 +1,140 @@
 # app/scripts/ingestion.py
 import uuid
 import re
-from pathlib import Path
-import sys
+import hashlib
 import os
+import sys
+from pathlib import Path
 
-# === 1. SET PATH ROOT SEBELUM APA PUN ===
+# === 1. SET PATH ROOT ===
 current_file_path = os.path.abspath(__file__)
-scripts_dir = os.path.dirname(current_file_path)  # /scripts
-root_dir = os.path.dirname(scripts_dir)           # /Pra Production
+scripts_dir = os.path.dirname(current_file_path)
+root_dir = os.path.dirname(scripts_dir)
 
 if root_dir not in sys.path:
-    sys.path.insert(0, root_dir)  # <-- insert(0) agar prioritas tinggi
+    sys.path.insert(0, root_dir)
 
-# === 2. BARU LOAD ENV & IMPORT INTERNAL MODULE ===
+# === 2. LOAD ENV & INTERNAL MODULES ===
 from dotenv import load_dotenv
 load_dotenv()
 
-# Sekarang aman mengimpor app.*
 from app.config import settings
 
-# === 3. IMPORT DEPENDENSI EKSTERNAL ===
+# === 3. EXTERNAL DEPENDENCIES ===
 from llama_index.readers.file import PDFReader
 from sentence_transformers import SentenceTransformer
 from qdrant_client import QdrantClient
 from qdrant_client.models import VectorParams, Distance, PointStruct
-from qdrant_client.http import models  # dipindah ke sini agar rapi
 
-# =============== FUNGSI-FUNGSI TETAP SAMA ===============
-# (copy-paste semua fungsi Anda di sini tanpa perubahan: extract_text_from_pdf_llamaindex, clean_text, dll.)
+# NLP untuk smart chunking
+import nltk
+nltk.download('punkt', quiet=True)
+
+# ================= HELPER FUNCTIONS =================
 
 def extract_text_from_pdf_llamaindex(pdf_path):
     print("\n[1] Ekstraksi PDF dengan LlamaIndex...")
+    if not os.path.exists(pdf_path):
+        print(f"  File tidak ditemukan: {pdf_path}")
+        return ""
     loader = PDFReader()
     documents = loader.load_data(file=Path(pdf_path))
     full_text = "\n".join([doc.text for doc in documents])
     page_count = len(documents)
-    print(f"Ekstraksi selesai, total {page_count} dokumen (file).")
+    print(f"  Ekstraksi selesai, total {page_count} dokumen.")
     return full_text
 
 def extract_text_from_web_async(urls):
     from llama_index.readers.web import TrafilaturaWebReader
-    print(f"\n[1.1] Ekstraksi dari {len(urls)} URL (async)...")
+    cleaned_urls = [url.strip() for url in urls if url.strip().startswith("http")]
+    if not cleaned_urls:
+        print("\n[1.1] Tidak ada URL valid untuk diekstrak.")
+        return ""
+    print(f"\n[1.1] Ekstraksi dari {len(cleaned_urls)} URL (async)...")
     reader = TrafilaturaWebReader()
-    documents = reader.load_data(urls=urls)
-    full_text = "\n".join([doc.text for doc in documents])
-    print("Ekstraksi web selesai.")
-    return full_text
+    try:
+        documents = reader.load_data(urls=cleaned_urls)
+        full_text = "\n".join([doc.text for doc in documents])
+        print("  Ekstraksi web selesai.")
+        return full_text
+    except Exception as e:
+        print(f"  Gagal ekstrak web: {e}")
+        return ""
 
 def clean_text(raw_text):
-    print("\n[2] Cleansing text...")
+    if not raw_text:
+        return ""
     cleaned = re.sub(r'\*\*(.*?)\*\*', r'\1', raw_text)
     cleaned = re.sub(r'\s+', ' ', cleaned)
-    cleaned = cleaned.strip()
-    print("Cleansing selesai, panjang teks:", len(cleaned))
-    return cleaned
+    return cleaned.strip()
 
-def chunk_text(text, chunk_size=500, overlap=100):
-    print("\n[3] Chunking text...")
-    chunks, start, text_length = [], 0, len(text)
-    while start < text_length:
-        end = start + chunk_size
-        chunks.append(text[start:end].strip())
-        start += chunk_size - overlap
-    print(f"Chunking selesai, total {len(chunks)} chunks.")
+
+def smart_chunk_semantic(text: str, max_chunk_size: int = 512, overlap: int = 64) -> list:
+    """Chunk berbasis batas kalimat (NLP-aware)."""
+    if not text.strip():
+        return []
+    paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
+    chunks = []
+    current_chunk = ""
+
+    for para in paragraphs:
+        sentences = nltk.sent_tokenize(para)
+        for sent in sentences:
+            test = (current_chunk + " " + sent).strip()
+            if len(test) <= max_chunk_size or not current_chunk:
+                current_chunk = test
+            else:
+                if current_chunk:
+                    chunks.append(current_chunk)
+                current_chunk = sent
+    if current_chunk:
+        chunks.append(current_chunk)
+
+    # Tambahkan overlap
+    if overlap > 0 and len(chunks) > 1:
+        overlapped = []
+        for i, chunk in enumerate(chunks):
+            if i == 0:
+                overlapped.append(chunk)
+            else:
+                prev_words = chunks[i-1].split()[-overlap//5:]
+                new_chunk = " ".join(prev_words + chunk.split())
+                overlapped.append(new_chunk)
+        chunks = overlapped
     return chunks
 
+
+def get_chunk_id(text: str) -> str:
+    return hashlib.md5(text.encode("utf-8", errors="ignore")).hexdigest()
+
 def get_embedder(model_name=settings.RAG.EMBEDDING_MODEL_NAME):
-    print("\n[4] Loading embedding model:", model_name)
+    print(f"\n[4] Loading embedding model: {model_name}")
     return SentenceTransformer(model_name)
 
 def store_to_qdrant(chunks, embeddings, collection_name, batch_size=50):
-    print("\n[5] Menyimpan embedding ke Qdrant...")
+    print(f"\n[5] Menyimpan embedding ke Qdrant (mode: append)...")
     client = QdrantClient(
         url=settings.RAG.QDRANT_URL,
         api_key=settings.RAG.QDRANT_API_KEY,
         timeout=30
     )
 
-    client.recreate_collection(
-        collection_name=collection_name,
-        vectors_config=VectorParams(
-            size=len(embeddings[0]),
-            distance=Distance.COSINE
+    embedding_size = len(embeddings[0]) if len(embeddings) > 0 else 768
+    collections = client.get_collections().collections
+    collection_names = [col.name for col in collections]
+
+    if collection_name not in collection_names:
+        client.create_collection(
+            collection_name=collection_name,
+            vectors_config=VectorParams(size=embedding_size, distance=Distance.COSINE)
         )
-    )
-    print(f"Collection '{collection_name}' berhasil dibuat/diganti dengan dimensi: {len(embeddings[0])}")
+        print(f"  Collection '{collection_name}' dibuat.")
+    else:
+        print(f"  Collection '{collection_name}' sudah ada. Menambahkan data...")
+
+    if not chunks:
+        print("  Tidak ada chunk untuk disimpan.")
+        return client
 
     total = len(chunks)
     for i in range(0, total, batch_size):
@@ -93,49 +142,76 @@ def store_to_qdrant(chunks, embeddings, collection_name, batch_size=50):
         batch_embeddings = embeddings[i:i + batch_size]
         points = [
             PointStruct(
-                id=str(uuid.uuid4()),
-                vector=embedding.tolist(),
+                id=get_chunk_id(chunk),
+                vector=emb.tolist(),
                 payload={"text": chunk},
             )
-            for chunk, embedding in zip(batch_chunks, batch_embeddings)
+            for chunk, emb in zip(batch_chunks, batch_embeddings)
         ]
         client.upsert(collection_name=collection_name, points=points)
-        print(f" Batch {i//batch_size + 1}: simpan {len(points)} chunks")
+        print(f"  Batch {i//batch_size + 1}: simpan {len(points)} chunks")
 
-    print(f"Sukses simpan {total} chunks ke collection '{collection_name}'")
+    print(f"\n=== INGESTION BERHASIL: {total} chunks ===")
     return client
 
 # ================= MAIN =================
 if __name__ == "__main__":
     PDF_FILES = [
-        "data/Pedoman-BKD-UIN-Salatiga-2023-31012023.pdf",
-        "data/RENSTRA-LPM-UIN-SALATIGA.pdf",
-        "data/RENSTRA-UIN-SALATIGA-2022-2024-20012023.pdf"
+        "data/uin_salatiga_struktur_organisasi1.pdf",
     ]
-    WEB_URLS = ["https://uin-salatiga.ac.id", "https://lpm.uin-salatiga.ac.id"]
-    COLLECTION_NAME = "my_pdf_collection"
+
+
+    WEB_URLS = [
+    "https://www.uinsalatiga.ac.id/#",
+    "https://www.uinsalatiga.ac.id/tentang-uin-salatiga/",
+    "https://www.uinsalatiga.ac.id/kehidupan-kampus/",
+    "https://www.uinsalatiga.ac.id/visi-dan-misi/",
+    ""
+    ]
+
+    COLLECTION_NAME = "uin_knowledge_base"
 
     print(f"\n================ STARTING RAG INGESTION ({COLLECTION_NAME}) ================")
 
-    combined_text = ""
+    all_chunks = []
+
+    # === Proses PDF ===
     for f in PDF_FILES:
         try:
-            combined_text += extract_text_from_pdf_llamaindex(f)
+            text = extract_text_from_pdf_llamaindex(f)
+            if not text.strip():
+                continue
+            else:
+                chunks = smart_chunk_semantic(text, max_chunk_size=512, overlap=64)
+            all_chunks.extend(chunks)
         except Exception as e:
-            print(f"Gagal baca {f}: {e}")
+            print(f"  Gagal baca {f}: {e}")
 
-    # web_text = extract_text_from_web_async(WEB_URLS)
-    # combined_text += "\n\n" + web_text
+    # === Proses Web ===
+    try:
+        web_text = extract_text_from_web_async(WEB_URLS)
+        if web_text.strip():
+            web_chunks = smart_chunk_semantic(web_text, max_chunk_size=512, overlap=64)
+            all_chunks.extend(web_chunks)
+    except Exception as e:
+        print(f"  Gagal ekstrak web: {e}")
 
-    cleaned_text = clean_text(combined_text)
-    chunks = chunk_text(cleaned_text, chunk_size=500, overlap=100)
+    if not all_chunks:
+        print("\n=== TIDAK ADA DATA UNTUK DIINGEST ===")
+        exit(0)
+
+    print(f"\n[3] Total chunks siap di-encode: {len(all_chunks)}")
 
     try:
         embedder = get_embedder()
-        embeddings = embedder.encode(chunks, convert_to_tensor=False)
-        client = store_to_qdrant(chunks=chunks, embeddings=embeddings, collection_name=COLLECTION_NAME)
-        print("\n=== INGESTION SUKSES SELESAI ===")
+        embeddings = embedder.encode(all_chunks, convert_to_tensor=False)
+        client = store_to_qdrant(
+            chunks=all_chunks,
+            embeddings=embeddings,
+            collection_name=COLLECTION_NAME
+        )
+        print("\n=== INGESTION SELESAI DENGAN AMAN ===")
     except Exception as e:
-        print(f"\n=== INGESTION GAGAL TOTAL ===")
-        print(f"Periksa Koneksi Qdrant atau API Key di .env. Detail: {e}")
+        print(f"\n=== ERROR SAAT INGESTION ===")
+        print(f"Detail: {e}")
         exit(1)

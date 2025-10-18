@@ -1,115 +1,377 @@
-<!-- Widget Chatbot Bulat - Versi UIN Salatiga (Ask Kodee Style) -->
-<div id="chatbot-widget" style="position: fixed; bottom: 40px; right: 20px; z-index: 9999; font-family: 'Futura Md BT', Arial, sans-serif;">
+<!-- Chatbot Widget -->
+<div id="chatbot-widget" class="chatbot-widget">
+  <!-- Toggle Button -->
+  <button id="chatbot-toggle" class="chatbot-toggle" aria-label="Buka asisten UINSAGA-AI">
+    <img src="/static/images/cs - Diedit.png" alt="" class="chatbot-toggle-icon" />
+    <span class="chatbot-toggle-text">UINSAGA-AI</span>
+  </button>
 
-  <!-- Tombol Utama (Pill Shape) -->
-  <div id="chatbot-toggle" style="display: flex; align-items: center; background: #EBD181; color: #000000; padding: 12px 20px; border-radius: 50px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: transform 0.2s;">
-<!-- Logo AI Customer Service (PNG) -->
-<img src="/static/wigdet-chatbot/cs - Diedit.png" alt="UINSAGA-AI" style="width: 24px; height: 24px; object-fit: contain; margin-right: 10px;">
-
-    <!-- Teks "UINSAGA-AI" -->
-    <span style="font-weight: bold; font-size: 14px;">UINSAGA-AI</span>
-  </div>
-
-  <!-- Chat Window (tersembunyi awalnya) -->
-  <div id="chatbot-body" style="display: none; position: absolute; bottom: 80px; right: 0; width: 340px; background: white; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); overflow: hidden;">
-
-  <!-- Header -->
-  <div style="background: #EBD181; color: #000000; padding: 14px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd;">
-    <div style="display: flex; align-items: center; gap: 10px;">
-      <!-- Ganti src dengan URL logo resmi UIN Salatiga -->
-      <img src="/static/wigdet-chatbot/uin keren - Diedit.png" 
-          alt="Logo UIN Salatiga" 
-          style="height: 48px; width: auto; object-fit: contain;">
-      <div>
-        <strong>UINSAGA-AI</strong><br>
-        <span style="font-size: 12px; opacity: 0.8;">Asisten Resmi UIN Salatiga</span>
+  <!-- Chat Window -->
+  <div id="chatbot-body" class="chatbot-body" role="dialog" aria-labelledby="chatbot-header">
+    <div class="chatbot-header" id="chatbot-header">
+      <div class="chatbot-header-logo">
+        <img src="/static/images/logo uin keren - Diedit.png" alt="Logo UIN Salatiga" class="chatbot-logo" />
+        <div>
+          <strong>UINSAGA-AI</strong><br />
+          <span class="chatbot-subtitle">Asisten Resmi UIN Salatiga</span>
+        </div>
       </div>
+      <button id="close-chat" class="chatbot-close-btn" aria-label="Tutup chat">
+        <span aria-hidden="true">×</span>
+      </button>
     </div>
-    <button id="close-chat" style="background: none; border: none; color: #000000; font-size: 20px; cursor: pointer; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;">×</button>
-  </div>
-    <!-- Chat Area -->
-    <div id="chat-messages" style="height: 300px; padding: 15px; overflow-y: auto; background: #f9f9fb; font-size: 14px; line-height: 1.5;">
-      <div style="color: #555; text-align: center; margin: 20px 0; font-style: italic;">
+
+    <div id="chat-messages" class="chatbot-messages" aria-live="polite">
+      <div class="chatbot-welcome">
         Halo! Saya siap bantu jawab pertanyaan tentang UIN Salatiga 😊
       </div>
     </div>
 
-    <!-- Input -->
-    <div style="padding: 12px; background: white; border-top: 1px solid #eee; display: flex;">
-      <input 
-        id="user-input" 
-        type="text" 
-        placeholder="Tulis pertanyaan Anda..." 
-        style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 20px; outline: none;"
-        onkeypress="if(event.key === 'Enter') sendMessage()"
+    <form id="chat-form" class="chatbot-input-area" novalidate>
+      <input
+        id="user-input"
+        type="text"
+        placeholder="Tulis pertanyaan Anda..."
+        class="chatbot-input"
+        autocomplete="off"
+        aria-label="Masukkan pertanyaan Anda"
       />
-      <button 
-        onclick="sendMessage()" 
-        style="background: #EBD181; color: white; border: none; width: 36px; height: 36px; border-radius: 50%; margin-left: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;"
-      >➤</button>
-    </div>
-
+      <button type="submit" class="chatbot-send-btn" aria-label="Kirim pesan">
+        ➤
+      </button>
+    </form>
   </div>
-
 </div>
 
+<style>
+/* ========================================
+   CHATBOT WIDGET — Clean, Scalable CSS
+   ======================================== */
+
+.chatbot-widget {
+  position: fixed;
+  bottom: 50px;
+  right: 20px;
+  z-index: 9999;
+  font-family: 'Futura Md BT', Arial, sans-serif;
+}
+
+/* Toggle Button */
+.chatbot-toggle {
+  display: flex;
+  align-items: center;
+  background: #EBD181;
+  color: #000;
+  padding: 12px 20px;
+  border-radius: 50px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: none;
+  outline: none;
+  font-weight: bold;
+  font-size: 14px;
+}
+.chatbot-toggle:hover,
+.chatbot-toggle:focus {
+  transform: scale(1.03);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  outline: 2px solid #d4b45a;
+}
+.chatbot-toggle-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  margin-right: 10px;
+}
+
+/* Chat Body */
+.chatbot-body {
+  display: none;
+  position: absolute;
+  bottom: 70px;
+  right: 0;
+  width: 350px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  max-height: 400px;
+  flex-direction: column;
+}
+
+/* Header */
+.chatbot-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #EBD181;
+  color: #000;
+  padding: 14px;
+  border-bottom: 1px solid #ddd;
+}
+.chatbot-header-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.chatbot-logo {
+  height: 48px;
+  width: auto;
+  object-fit: contain;
+}
+.chatbot-subtitle {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+/* Close Button */
+.chatbot-close-btn {
+  background: none;
+  border: none;
+  color: #000;
+  font-size: 24px;
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  padding: 0;
+}
+.chatbot-close-btn:hover,
+.chatbot-close-btn:focus {
+  background: rgba(0, 0, 0, 0.1);
+  outline: 2px solid #d4b45a;
+}
+
+/* Messages Area */
+.chatbot-messages {
+  height: 300px;
+  padding: 15px;
+  overflow-y: auto;
+  background: #f9f9fb;
+  font-size: 14px;
+  line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+}
+.chatbot-welcome {
+  color: #555;
+  text-align: center;
+  margin: 20px 0;
+  font-style: italic;
+}
+
+/* Message Bubbles */
+.chat-message {
+  display: flex;
+  margin: 8px 0;
+}
+.chat-message--user {
+  justify-content: flex-end;
+}
+.chat-message--ai {
+  justify-content: flex-start;
+}
+.chat-bubble {
+  padding: 10px 14px;
+  border-radius: 12px;
+  word-break: break-word;
+  line-height: 1.4;
+  max-width: 85%;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+}
+.chat-bubble--user {
+  background: #EBD181;
+  color: #000;
+}
+.chat-bubble--ai {
+  background: #e0e7ff;
+  color: #333;
+}
+
+/* Input Area */
+.chatbot-input-area {
+  display: flex;
+  padding: 12px;
+  background: white;
+  border-top: 1px solid #eee;
+  gap: 8px;
+}
+.chatbot-input {
+  flex: 1;
+  padding: 10px 16px;
+  border: 1px solid #ccc;
+  border-radius: 20px;
+  outline: none;
+  font-size: 14px;
+  font-family: inherit;
+}
+.chatbot-input:focus {
+  border-color: #EBD181;
+  box-shadow: 0 0 0 2px rgba(235, 209, 129, 0.3);
+}
+.chatbot-send-btn {
+  background: #EBD181;
+  color: #fff;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+.chatbot-send-btn:hover,
+.chatbot-send-btn:focus {
+  background: #d4b45a;
+  outline: 2px solid #c9a94f;
+}
+
+/* Typing Indicator Animation */
+.typing-indicator {
+  display: flex;
+  padding: 10px 14px;
+}
+.typing-indicator span {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin: 0 1px;
+  background-color: #777;
+  border-radius: 50%;
+  animation: dot-typing 1.5s infinite ease-in-out;
+}
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+@keyframes dot-typing {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+/* Responsive (Optional) */
+@media (max-width: 480px) {
+  .chatbot-widget {
+    right: 10px;
+    bottom: 10px;
+  }
+  .chatbot-body {
+    width: calc(100vw - 40px);
+    right: 10px;
+    bottom: 60px;
+  }
+}
+</style>
+
 <script>
-// Toggle chat window
-document.getElementById('chatbot-toggle').addEventListener('click', function() {
-  const body = document.getElementById('chatbot-body');
-  body.style.display = body.style.display === 'none' ? 'block' : 'none';
-});
+document.addEventListener('DOMContentLoaded', () => {
+  // DOM Elements
+  const toggleBtn = document.getElementById('chatbot-toggle');
+  const closeBtn = document.getElementById('close-chat');
+  const chatBody = document.getElementById('chatbot-body');
+  const messagesContainer = document.getElementById('chat-messages');
+  const chatForm = document.getElementById('chat-form');
+  const userInput = document.getElementById('user-input');
 
-document.getElementById('close-chat').addEventListener('click', function() {
-  document.getElementById('chatbot-body').style.display = 'none';
-});
+  // State
+  let isLoading = false;
 
-// Kirim pesan ke API
-async function sendMessage() {
-  const input = document.getElementById('user-input');
-  const message = input.value.trim();
-  if (!message) return;
-
-  // Tampilkan pesan user
-  addMessage(message, 'user');
-  input.value = '';
-
-  try {
-    // Ganti URL ini dengan endpoint API Anda
-    const res = await fetch('/api/ask', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: message })
-    });
-    const data = await res.json();
-    addMessage(data.answer || "Maaf, saya tidak dapat menjawab saat ini.", 'ai');
-  } catch (err) {
-    addMessage("Mohon Maaf Server dalam pemeliharaan coba lagi nanti ya", 'ai');
+  // === Event Listeners ===
+// === Event Listeners ===
+toggleBtn.addEventListener('click', () => {
+  const isHidden = window.getComputedStyle(chatBody).display === 'none';
+  chatBody.style.display = isHidden ? 'flex' : 'none';
+  if (isHidden) {
+    userInput.focus();
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
   }
-}
+  });
 
-// Tambahkan pesan ke chat
-function addMessage(text, sender) {
-  const messagesDiv = document.getElementById('chat-messages');
-  const msgDiv = document.createElement('div');
-  msgDiv.style.padding = '10px';
-  msgDiv.style.margin = '8px 0';
-  msgDiv.style.borderRadius = '12px';
-  msgDiv.style.maxWidth = '85%';
-  msgDiv.style.wordBreak = 'break-word';
-  msgDiv.style.lineHeight = '1.4';
+  closeBtn.addEventListener('click', () => {
+    chatBody.style.display = 'none';
+  });
 
-  if (sender === 'user') {
-    msgDiv.style.backgroundColor = '#EBD181'; // Kuning UIN
-    msgDiv.style.marginLeft = 'auto';
-    msgDiv.style.textAlign = 'right';
-  } else {
-    msgDiv.style.backgroundColor = '#e0e7ff'; // Biru muda
-    msgDiv.style.marginRight = 'auto';
+  chatForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (!isLoading) {
+      sendMessage();
+    }
+  });
+
+  // === Core Functions ===
+  function addMessage(text, sender, isTyping = false) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `chat-message chat-message--${sender}`;
+
+    const bubble = document.createElement('div');
+    if (isTyping) {
+      bubble.className = 'typing-indicator';
+      bubble.innerHTML = '<span></span><span></span><span></span>';
+    } else {
+      bubble.className = `chat-bubble chat-bubble--${sender}`;
+      bubble.textContent = text;
+    }
+
+    messageDiv.appendChild(bubble);
+    messagesContainer.appendChild(messageDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
   }
 
-  msgDiv.textContent = text;
-  messagesDiv.appendChild(msgDiv);
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
-}
+  async function sendMessage() {
+    const message = userInput.value.trim();
+    if (!message) return;
+
+    // Add user message
+    addMessage(message, 'user');
+    userInput.value = '';
+    isLoading = true;
+
+    // Show typing indicator
+    const typingEl = addTypingIndicator();
+
+    try {
+      const res = await fetch('/api/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: message }),
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const data = await res.json();
+      const answer = data?.answer || 'Maaf, saya tidak dapat menjawab saat ini.';
+
+      // Remove typing indicator
+      typingEl.remove();
+      // Add AI response
+      addMessage(answer, 'ai');
+    } catch (err) {
+      console.error('Chatbot error:', err);
+      typingEl.remove();
+      addMessage('Mohon maaf, server sedang dalam pemeliharaan. Coba lagi nanti ya.', 'ai');
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  function addTypingIndicator() {
+    const typingDiv = document.createElement('div');
+    typingDiv.className = 'chat-message chat-message--ai';
+    const indicator = document.createElement('div');
+    indicator.className = 'typing-indicator';
+    indicator.innerHTML = '<span></span><span></span><span></span>';
+    typingDiv.appendChild(indicator);
+    messagesContainer.appendChild(typingDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    return typingDiv;
+  }
+});
 </script>
