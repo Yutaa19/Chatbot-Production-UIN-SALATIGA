@@ -11,8 +11,8 @@ Chatbot AI resmi Universitas Islam Negeri (UIN) Salatiga yang menjawab pertanyaa
 ## Teknologi
 - **Backend**: Python Flask + Gunicorn
 - **Vector DB**: Qdrant (self-hosted)
-- **Embedding**: `all-MiniLM-L6-v2`
-- **LLM**: Google Gemini 1.5 Flash
+- **Embedding**: `firqaaa/indo-sentence-bert-base`
+- **LLM**: Google Gemini 2.5 Flash
 - **Cache**: Redis
 - **Deployment**: VPS Hostinger (KVM2)
 

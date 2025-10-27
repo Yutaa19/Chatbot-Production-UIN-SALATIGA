@@ -5,13 +5,12 @@ import logging
 from logging.handlers import RotatingFileHandler
 from flask import Flask, render_template
 from dotenv import load_dotenv
-
+from flask_cors import CORS
 load_dotenv()
 
 # Fail-fast config validation
 from app.config import settings
 from app.rag_initializer import get_runtime_components
-
 
 
 def create_app():
@@ -23,6 +22,25 @@ def create_app():
                 static_folder=os.path.join(ROOT_DIR, 'static'))
 
     app.secret_key = settings.FLASK_SECRET_KEY
+
+    CORS(app, 
+         resources={
+             # Hanya terapkan CORS ke endpoint API Anda
+             r"/api/*": {
+                 # Izinkan HANYA domain-domain ini
+                 "origins": [ 
+                     "https://www.uinsalatiga.ac.id"
+                     # Jika ada subdomain lain (misal: fti.uinsalatiga.ac.id),
+                     # tambahkan juga ke daftar ini
+                 ]
+             }
+         },
+         # Izinkan header 'Content-Type' (penting untuk JSON)
+         # dan 'X-CSRF-Token' jika Anda menggunakannya
+         supports_credentials=True 
+    )
+
+
 
     @app.route('/')
     def widget():

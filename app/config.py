@@ -12,7 +12,7 @@ class RAGSettings(BaseSettings):
     QDRANT_API_KEY: str
     TOP_K_RETRIEVAL: int = Field(default=3)
     COLLECTION_NAME: str = Field(default="uin_knowledge_base") 
-    RAG_RELEVANCE_THRESHOLD: float = Field(default=0.8)  
+    RAG_RELEVANCE_THRESHOLD: float = Field(default=0.65)  
 class AppConfig(BaseSettings):
     GEMINI_API_KEY: str
     GEMINI_MODEL_NAME: str = Field(default="gemini-2.5-flash")

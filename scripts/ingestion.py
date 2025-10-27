@@ -66,6 +66,8 @@ def clean_text(raw_text):
         return ""
     cleaned = re.sub(r'\*\*(.*?)\*\*', r'\1', raw_text)
     cleaned = re.sub(r'\s+', ' ', cleaned)
+    cleaned = re.sub(r'[:=]+', ' ', cleaned)
+    cleaned = re.sub(r'\s+', ' ', cleaned)
     return cleaned.strip()
 
 
@@ -157,16 +159,13 @@ def store_to_qdrant(chunks, embeddings, collection_name, batch_size=50):
 # ================= MAIN =================
 if __name__ == "__main__":
     PDF_FILES = [
-        "data/uin_salatiga_struktur_organisasi1.pdf",
+    
     ]
 
 
     WEB_URLS = [
-    "https://www.uinsalatiga.ac.id/#",
-    "https://www.uinsalatiga.ac.id/tentang-uin-salatiga/",
-    "https://www.uinsalatiga.ac.id/kehidupan-kampus/",
-    "https://www.uinsalatiga.ac.id/visi-dan-misi/",
-    ""
+        "https://www.uinsalatiga.ac.id/pengabdian-kepada-masyarakat/",
+        "https://www.uinsalatiga.ac.id/unit-kegiatan-mahasiswa/"
     ]
 
     COLLECTION_NAME = "uin_knowledge_base"

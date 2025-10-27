@@ -2,14 +2,14 @@ import re
 import logging
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
+from flask import current_app, g
+import requests
+from bs4 import BeautifulSoup
 
 # --- Google Generative AI SDK (Resmi & Terbaru) ---
-from google import genai
+
 from google.genai import types
-
-
 import google.generativeai as genai 
-from google.genai.types import HarmCategory, HarmBlockThreshold, GenerateContentConfig
 
 # --- Konfigurasi & Komponen Internal ---
 from app.config import settings
@@ -70,8 +70,14 @@ def _google_search_tool(query: str) -> str:
     Ganti dengan integrasi nyata di production (misal: Google Programmable Search Engine).
     """
     logger.info(f"[TOOL] Google Search dipanggil untuk: '{query}'")
+
+    # Menggunakan logger Flask dengan request_id
+    current_app.logger.info(
+        f"[TOOL_STUB] Google Search dipanggil untuk: '{query}'",
+        extra={'request_id': g.get('request_id'), 'query': query}
+    )
     
-    # 🔁 STUB DEVELOPMENT — GANTI DI PRODUCTION
+    # STUB DEVELOPMENT — GANTI DI PRODUCTION
     return (
         f"Di lingkungan production, sistem akan mencari informasi terkini tentang '{query}' "
         f"melalui Google Search dan memberikan jawaban berbasis hasil tersebut."
@@ -86,8 +92,13 @@ def search_qdrant(query: str, top_k: int = 3):
     Cari dokumen relevan di Qdrant dengan preprocessing, embedding, dan validasi vektor.
     Mengembalikan: List[{'text': str, 'score': float}]
     """
-    logger.info(f"[RAG] Mencari dokumen untuk query: '{query}'")
+    request_id = g.get('request_id') # Ambil request_id untuk logging
     
+    current_app.logger.info(
+        f"[RAG] Mencari dokumen untuk query: '{query}'",
+        extra={'request_id': request_id, 'query': query}
+    )
+
     try:
         rag = get_runtime_components()
         client = rag["qdrant_client"]
@@ -163,11 +174,12 @@ def construct_prompt(user_query: str, rag_context: str = "", conversation_histor
     Bangun system prompt dan user prompt untuk LLM.
     """
     system_prompt = (
-        "Anda adalah Customer Service resmi Kampus UIN Salatiga. "
-        "Jawab dengan profesional, ramah, sopan, dan akurat. "
-        "1. Jika ada KONTEKS INTERNAL, gunakan hanya informasi tersebut. "
-        "2. Jika tidak ada konteks, gunakan Google Search untuk mencari informasi terkini. "
-        "3. Jangan mengarang, jangan menyebut proses teknis, dan batasi jawaban maksimal 2 kalimat."
+    "Anda adalah Chatbot UIN_SAGA resmi Kampus UIN Salatiga. "
+    "Jawab dengan profesional, ramah, sopan, dan akurat. "
+    "1. **Prioritaskan** selalu informasi dari KONTEKS INTERNAL jika tersedia dan relevan. "
+    "2. Gunakan Google Search **hanya jika** KONTEKS INTERNAL tidak ada ATAU pertanyaan bersifat sangat baru (berita, acara mendatang, info pimpinan terbaru) yang tidak mungkin ada di konteks internal. "
+    "3. Jangan mengarang, jangan menyebut proses teknis (seperti 'berdasarkan pencarian Google' atau 'dari konteks RAG'), dan batasi jawaban maksimal 2-3 kalimat ringkas."
+    "jangan pernah menyatakan bahwa anda adalah model AI ataupun LLM. anda hanya bisa menyatakan CHATBOT UIN-SAGA. "
     )
 
     parts = []
@@ -194,51 +206,99 @@ import os
 GOOGLE_SEARCH_API_KEY = settings.GOOGLE_SEARCH_API_KEY
 SEARCH_ENGINE_ID = settings.SEARCH_ENGINE_ID
 
-def search_google(query: str) -> dict: # <-- UBAH TIPE OUTPUT MENJADI DICT
-    """
-    Melakukan pencarian di Google dan mengembalikan hasil terstruktur
-    sebagai DICTIONARY agar kompatibel dengan FunctionResponse.
-    """
+# ... (impor lain dan definisi GOOGLE_SEARCH_API_KEY, SEARCH_ENGINE_ID) ...
+
+def extract_main_content(url: str) -> str:
+    """Mengekstrak teks utama dari URL menggunakan BeautifulSoup (versi sederhana)."""
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0'} # Beberapa web butuh user-agent
+        response = requests.get(url, headers=headers, timeout=7)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        # Heuristik sederhana: ambil teks dari tag <p>, <article>, atau <body>
+        paragraphs = soup.find_all('p')
+        if not paragraphs:
+             # Fallback ke body jika tidak ada <p>
+            body_text = soup.body.get_text(separator=' ', strip=True) if soup.body else ""
+            return body_text[:1500] # Batasi panjangnya
+
+        content = ' '.join([p.get_text(strip=True) for p in paragraphs])
+        return content[:1500] # Batasi panjang konten yang diekstrak
+    except Exception as e:
+        current_app.logger.warning(
+            f"[TOOL] Gagal ekstrak konten dari {url}: {e}",
+            extra={'request_id': g.get('request_id')}
+        )
+        return ""
+
+def search_google(query: str) -> dict:
+    """Melakukan Google Search DAN ekstraksi konten dari hasil teratas."""
+    request_id = g.get('request_id')
+
     if not GOOGLE_SEARCH_API_KEY or not SEARCH_ENGINE_ID:
-        logger.error("[TOOL] API Key Google Search atau Search Engine ID tidak diatur.")
-        # Kembalikan dictionary error
+        current_app.logger.error(
+            "[TOOL] Google Search API Key/Engine ID tidak diatur.",
+            extra={'request_id': request_id}
+        )
         return {"error": "Layanan pencarian tidak terkonfigurasi."}
 
     url = "https://www.googleapis.com/customsearch/v1"
-    params = {
-        'key': GOOGLE_SEARCH_API_KEY,
-        'cx': SEARCH_ENGINE_ID,
-        'q': query,
-        'num': 3 # Ambil 3 hasil teratas
-    }
-    
+    # Ambil 5 hasil untuk cadangan jika ekstraksi gagal
+    params = {'key': GOOGLE_SEARCH_API_KEY, 'cx': SEARCH_ENGINE_ID, 'q': query, 'num': 5}
+
     try:
         response = requests.get(url, params=params, timeout=5)
         response.raise_for_status()
         results = response.json()
-        
-        snippets_list = []
-        if 'items' in results:
-            for item in results.get('items', []):
-                # Buat dictionary untuk setiap hasil
-                snippets_list.append({
-                    "snippet": item.get('snippet', 'Tidak ada snippet.'),
-                    "source_title": item.get('title', 'Tanpa Judul'),
-                    "url": item.get('link', '')
-                })
-        
-        if not snippets_list:
-            # Kembalikan dictionary "tidak ditemukan"
-            return {"status": "not_found", "message": "Tidak ada hasil pencarian yang relevan."}
-            
-        # --- PERUBAHAN KRITIS ---
-        # Kembalikan dictionary yang berisi list hasil
-        return {"status": "success", "results": snippets_list}
-        
-    except requests.exceptions.RequestException as e:
-        logger.error(f"[TOOL] Error saat memanggil Google Search API: {e}")
-        return {"error": f"Error saat menghubungi layanan pencarian: {e}"}
 
+        extracted_results = []
+        if 'items' in results:
+            # Coba ekstrak konten dari 2-3 hasil teratas
+            count = 0
+            for item in results.get('items', []):
+                link = item.get('link')
+                snippet = item.get('snippet', '')
+                title = item.get('title', 'Tanpa Judul')
+
+                if link and count < 3: # Batasi ekstraksi ke 3 URL teratas
+                    content = extract_main_content(link)
+                    if content:
+                         extracted_results.append({
+                            "extracted_content": content, # <-- Konten halaman web
+                            "snippet": snippet,
+                            "source_title": title,
+                            "url": link
+                        })
+                         count += 1
+                    else:
+                        # Jika ekstraksi gagal, pakai snippet saja
+                        extracted_results.append({
+                            "extracted_content": snippet, # Fallback ke snippet
+                            "snippet": snippet,
+                            "source_title": title,
+                            "url": link
+                        })
+                elif snippet: # Untuk hasil ke-4 dst, cukup pakai snippet
+                     extracted_results.append({
+                            "extracted_content": snippet,
+                            "snippet": snippet,
+                            "source_title": title,
+                            "url": link
+                        })
+
+        if not extracted_results:
+            return {"status": "not_found", "message": "Tidak ada hasil pencarian yang relevan."}
+
+        # Kembalikan hasil yang sudah diekstrak
+        return {"status": "success", "results": extracted_results}
+
+    except requests.exceptions.RequestException as e:
+        current_app.logger.error(
+            f"[TOOL] Error Google Search API: {e}",
+            extra={'request_id': request_id, 'query': query}, exc_info=True
+        )
+        return {"error": f"Error layanan pencarian: {e}"}
 # ... (Kode di atas tetap sama) ...
 
 # Asumsi: settings, logger, dan fungsi search_google sudah didefinisikan di atas
@@ -252,8 +312,12 @@ def ask_gemini(
     Menggunakan 'generate_content' (stateless) dengan riwayat (history)
     yang HANYA berisi format 'dict' murni untuk menghindari error serialisasi.
     """
-    logger.info(f"[LLM] Memanggil {settings.GEMINI_MODEL_NAME}. Custom Search: {enable_google_search}")
-
+    request_id = g.get('request_id')
+    
+    current_app.logger.info(
+        f"[LLM] Memanggil {settings.GEMINI_MODEL_NAME}. Custom Search: {enable_google_search}",
+        extra={'request_id': request_id}
+    )
     # --- 1. Tools & Model Initialization (Sudah Benar) ---
     tools = [search_google] if enable_google_search else []
     model = genai.GenerativeModel(

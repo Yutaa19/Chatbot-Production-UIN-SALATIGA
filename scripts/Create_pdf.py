@@ -18,179 +18,37 @@ def create_dummy_pdf(filename="pt_freshveggies.pdf"):
     story = []
 
     content = """
-🏛️ Laporan Komprehensif: Standar Operasional Prosedur Akademik & Kepegawaian UIN Salatiga
-I. PENYUSUNAN KALENDER AKADEMIK
+Pendidikan Profesi Guru (PPG) di UIN Salatiga dikenal sebagai entitas pendidikan tinggi yang memiliki peran sentral dalam membentuk dan melatih calon-calon guru profesional berintegritas. Misi utamanya adalah memberikan pembekalan yang holistik kepada para calon guru, meliputi aspek moral dan spiritualitas Islam. Dengan visi yang teguh untuk meningkatkan kualitas pendidikan di Indonesia, PPG UIN Salatiga diharapkan menjadi pusat pembentukan bagi generasi guru yang mampu memberikan dampak positif dan signifikan dalam meningkatkan mutu pendidikan nasional.
 
-Nomor Dokumen: B-01/In.21/IR.1/HO.00.7/05/2015
-Tanggal Pembuatan: Agustus 2015
-Revisi Terakhir: 28 Agustus 2023
-Disahkan oleh: Prof. Dr. Muh. Saerozi, M.Ag.
+PPG UIN Salatiga menawarkan beragam program studi yang dirancang dengan cermat, memungkinkan eksplorasi konsep-konsep pedagogis terkini seiring dengan kemajuan ilmu pengetahuan dan teknologi. Kurikulum yang disusun mencakup empat pilar kompetensi utama: pedagogik, sosial, kepribadian, dan ilmu keislaman, yang diberikan secara holistik untuk memastikan para lulusan tidak hanya memiliki keterampilan teknis, tetapi juga fondasi moral dan keislaman yang kokoh.
 
-Dasar Hukum
+PPG UIN Salatiga, Menyemai Ilmu,Membangun Profesionalisme Guru
 
-Undang-Undang Nomor 12 Tahun 2012 tentang Pendidikan Tinggi.
+Prof. Dr. Mansur, M.Ag (Ketua LPTK UIN Salatiga)
+Sejak berdirinya, PPG UIN Salatiga telah menjadi tempat berkembangnya pendidik berkualitas yang mampu beradaptasi dengan dinamika era pos-humanisme, terutama dalam konteks teknologi kecerdasan buatan. Prestasi dan kontribusi lulusan PPG UIN Salatiga telah diakui luas, menegaskan peran lembaga ini sebagai episentrum pendidikan dan motor penggerak perubahan dalam dunia pendidikan.
 
-Peraturan Pemerintah Nomor 4 Tahun 2014 tentang Penyelenggaraan Pendidikan Tinggi.
+Tidak hanya sebagai tempat inkubasi pendidik, PPG UIN Salatiga juga aktif dalam kegiatan riset dan inovasi, khususnya dalam bidang pedagogik. Dengan menyatukan teori dan praktik, lembaga ini berupaya memberikan kontribusi pada pengembangan ilmu pengetahuan pedagogik keislaman serta memperkuat landasan ilmiah dalam proses pembelajaran.
 
-Peraturan Pemerintah Nomor 66 Tahun 2010 jo. Nomor 17 Tahun 2010 tentang Pengelolaan Pendidikan.
+Dengan komitmen yang teguh terhadap profesionalisme dan nilai-nilai Islam, PPG UIN Salatiga telah menjadi pusat keunggulan dalam pendidikan profesi guru di Indonesia. Melalui pendekatan ilmiah dan holistik, lembaga ini tidak hanya mencetak generasi guru berkualitas, tetapi juga membuka ruang untuk eksplorasi dan pengembangan pengetahuan yang mendukung perubahan positif dalam dunia pendidikan.
 
-Kualifikasi Pelaksana
+Sejarah Program Studi Pendidikan Profesi Guru (PPG) di Universitas Islam Negeri (UIN) Salatiga merupakan cerminan dari perubahan dan evolusi dalam sistem pendidikan Indonesia, yang senantiasa beradaptasi dengan dinamika zaman dan tuntutan masyarakat. Dalam menghadapi tantangan baru yang muncul dengan cepat dan tidak terduga, terutama dalam dunia pendidikan, penting bagi lembaga pendidikan untuk terus memperbarui diri guna menjawab kebutuhan masyarakat akan tenaga pendidik yang berkualitas.
 
-Mampu melaksanakan tugas keadministrasian, mengoperasikan komputer dan SIAKAD, serta menyusun dokumen kegiatan akademik.
+Pada tanggal 6 Januari 2021, Menteri Agama Republik Indonesia mengeluarkan Surat Keputusan Nomor 72 tahun 2021, yang memberikan izin kepada UIN Salatiga untuk menyelenggarakan Program Studi Pendidikan Profesi Guru (PPG). Keputusan ini merupakan langkah strategis dalam menjawab kompleksitas tantangan pendidikan yang dihadapi bangsa, termasuk di antaranya meningkatkan kualitas pendidikan serta kesejahteraan guru.
 
-Peralatan
+Visi: program Studi Pendidikan Profesi Guru di UIN Salatiga adalah:
 
-Komputer & internet, printer, konsep kalender akademik, serta kalender tahun sebelumnya.
+Menjadi pusat unggulan Program Studi Pendidikan Profesi Guru di bidang sains, teknologi, dan seni untuk keluhuran martabat kemanusiaan berbasis wasatiyah Islam pada tahun 2045.
 
-Prosedur Utama
+Misi: program Studi Pendidikan Profesi Guru di UIN Salatiga melaksanakan misi sebagai berikut:
 
-Menyusun konsep kalender akademik berdasar kalender sebelumnya.
+a. Menyelenggarakan program pendidikan profesi guru keagamaan yang berkualitas, akuntabel, dan amanah, dengan memastikan penyelenggaraan pembelajaran yang inovatif dan berbasis kebutuhan zaman.
 
-Memberikan masukan terhadap konsep tersebut (3 hari).
+b. Melaksanakan penelitian dan pengabdian dalam upaya meningkatkan profesionalitas guru dan pembinaannya secara berkelanjutan dan kredibel, dengan fokus pada pengembangan metode pengajaran yang efektif serta implementasi praktik terbaik dalam bidang pendidikan keagamaan.
 
-Revisi konsep sesuai hasil rapat senat.
+c. Menyediakan media publikasi ilmiah dan fasilitasnya untuk meningkatkan keterampilan guru keagamaan yang profesional, dengan tujuan memfasilitasi pertukaran pengetahuan dan pengalaman antar para praktisi pendidikan keagamaan serta mendorong terciptanya lingkungan akademik yang inspiratif dan kolaboratif.
 
-Pengesahan konsep final dan penandatanganan oleh pejabat berwenang.
+Dengan visi dan misi ini, Program Studi Pendidikan Profesi Guru di UIN Salatiga bertekad untuk menjadi garda terdepan dalam mencetak guru-guru yang tidak hanya berkualitas dalam bidang sains, teknologi, dan seni, tetapi juga memiliki komitmen tinggi terhadap nilai-nilai wasatiyah Islam dan mengabdi pada kemajuan pendidikan serta kemartabatan kemanusiaan.
 
-Distribusi kalender akademik ke fakultas, pascasarjana, dan lembaga.
-
-⚠️ Jika SOP ini tidak dijalankan, maka keabsahan kalender akademik tertunda dan kegiatan akademik dapat terhambat.
-
-II. REGISTRASI MAHASISWA LAMA
-
-Tanggal Revisi: 28 Agustus 2023
-Disahkan oleh: Dr. Muh. Saerozi, M.Ag.
-
-Dasar Hukum
-
-UU No. 12 Tahun 2012.
-
-PP No. 4 Tahun 2014.
-
-PP No. 66 Tahun 2010 jo. 17 Tahun 2010.
-
-Kualifikasi Pelaksana
-
-Kompetensi administrasi, komputer, dan SIAKAD.
-
-Peralatan
-
-Komputer, internet, printer, dan dokumen tagihan UKT.
-
-Alur Proses
-
-Input Tagihan UKT ke SIAKAD – 5 menit.
-
-Mahasiswa melihat tagihan – 5 menit.
-
-Pembayaran UKT ke bank tujuan – 15 menit.
-
-Pengisian dan pencetakan KRS – 30 menit.
-
-Persetujuan KRS oleh Dosen PA – 1 hari.
-
-Revisi KRS (jika perlu) – 30 menit.
-
-Pengumpulan KRS final ke fakultas – 5 menit.
-
-⚠️ Keterlambatan registrasi menghambat akses perkuliahan dan validasi akademik.
-
-III. PENGISIAN KRS MAHASISWA BARU (USER EDUCATION)
-
-Revisi: 28 Agustus 2023
-Disahkan oleh: Rektor melalui Bidang Akademik.
-
-Dasar Hukum
-
-Sama dengan SOP Registrasi Mahasiswa Lama, ditambah Pedoman Pendidikan Tahun Berjalan.
-
-Kualifikasi Pelaksana
-
-Mahasiswa baru yang mampu mengoperasikan komputer dan SIAKAD.
-
-Langkah-langkah
-
-Pengumuman jadwal pelaksanaan User Education – 20 menit.
-
-Mahasiswa memperoleh informasi jadwal pelatihan – 5 menit.
-
-Mengikuti User Education dan melakukan pengisian KRS di SIAKAD – 2 minggu.
-
-Output akhir: KRS mahasiswa baru yang sudah terekam di sistem akademik.
-
-IV. PENERBITAN IJAZAH
-
-Disahkan oleh: Rektor dan Dekan UIN Salatiga.
-
-Dasar Hukum
-
-UU No. 12 Tahun 2012
-
-PP No. 4 Tahun 2014
-
-PP No. 66 Tahun 2010 jo. 17 Tahun 2010
-
-Kualifikasi & Peralatan
-
-Kemampuan administratif, komunikasi online, komputer, printer, ATK, dan blangko ijazah kosong.
-
-Tahapan
-
-Pengumpulan data calon wisudawan – 3 hari.
-
-Validasi penulisan data ijazah – 3 hari.
-
-Penyusunan konsep ijazah + nomor ijazah nasional (PIN) – 1 hari.
-
-Distribusi konsep ijazah untuk validasi – 1 minggu.
-
-Validasi dan pencetakan ijazah final – 3 hari.
-
-Penandatanganan oleh Dekan dan Rektor – 1 hari.
-
-Penyerahan ijazah ke mahasiswa – 5 menit per penerima.
-
-⚠️ Keterlambatan pelaksanaan akan menunda legalitas akademik mahasiswa yang telah lulus.
-
-V. REKAPITULASI KEHADIRAN PEGAWAI
-
-Nomor: B-/In.21/B/HO.00.7/11/2019
-Efektif: 1 Oktober 2023
-Disahkan oleh: Drs. H. Suhersi.
-
-Dasar Hukum
-
-UU No. 5 Tahun 2014 tentang ASN.
-
-PP No. 11 Tahun 2017 jo. PP No. 17 Tahun 2020.
-
-Peraturan Badan Kepegawaian No. 24 Tahun 2017 jo. No. 7 Tahun 2021.
-
-Kualifikasi Pelaksana
-
-Menguasai aplikasi PUSAKA dan presensi instansi.
-
-Memahami regulasi cuti dan renstra instansi.
-
-Peralatan
-
-Database kepegawaian, aplikasi PUSAKA & presensi, ATK, komputer, internet.
-
-Langkah-langkah
-
-Pegawai melakukan absensi harian (Senin–Kamis: 07.30–16.00; Jumat: 07.30–16.30).
-
-Validasi surat tugas, izin, dan cuti.
-
-Rekapitulasi hasil rekonsiliasi data absen bulanan.
-
-Verifikasi akhir oleh tim kepegawaian.
-
-⚠️ Rekap tidak tepat waktu dapat menghambat pembayaran tunjangan kinerja dan pelaporan ke pimpinan.
-
-🔍 Kesimpulan Umum
-
-Kelima SOP ini memperlihatkan pola manajemen akademik dan kepegawaian UIN Salatiga yang sangat sistematis, dengan tahapan waktu yang jelas dan tanggung jawab spesifik di setiap level birokrasi. Seluruh proses — mulai dari penyusunan kalender akademik hingga pencetakan ijazah — menekankan keabsahan administratif, efisiensi waktu, serta integritas sistem digital (SIAKAD dan PUSAKA).
     """
 
     for line in content.split("\n\n"):
@@ -201,4 +59,4 @@ Kelima SOP ini memperlihatkan pola manajemen akademik dan kepegawaian UIN Salati
     print(f"PDF berhasil disimpan di: {filepath}")
 
 if __name__ == "__main__":
-    create_dummy_pdf("sop_uin_salatiga.pdf")
+    create_dummy_pdf("prodi_ppg.pdf")

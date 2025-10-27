@@ -1,0 +1,41 @@
+# Abaikan virtual environment
+venv/
+*.venv/
+env/
+
+# Abaikan cache dan file terkompilasi Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Abaikan file environment. Ini SANGAT PENTING untuk keamanan.
+# Kita akan menyuntikkan .env saat 'docker run', bukan saat 'build'.
+.env
+.env.*
+tests/.env.test
+
+# Abaikan file konfigurasi IDE dan OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
+
+# Abaikan Git
+.git/
+.gitignore
+
+# Abaikan folder tes dan file development
+tests/
+requirements-dev.txt
+
+# Abaikan data mentah. Data ini seharusnya diproses oleh script
+# 'ingestion.py' yang terpisah. Tidak perlu ada di image aplikasi.
+data/
+*.pdf
+
+# Abaikan log dan file sementara
+logs/
+*.log
+*.tmp
+*.bak
