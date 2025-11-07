@@ -3,7 +3,7 @@ import os
 
 bind = "127.0.0.1:8000"  # Hanya bind ke localhost (Nginx sebagai reverse proxy)
 workers = 2              # 2 worker untuk 2 vCPU
-worker_class = "sync"
+worker_class = "gevent"
 timeout = 90
 keepalive = 5
 max_requests = 400

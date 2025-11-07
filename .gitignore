@@ -1,5 +1,6 @@
 # Environment
 .env
+tests/.env.test
 
 # Logs
 logs/*.log
@@ -23,3 +24,5 @@ Thumbs.db
 docs/API.md
 docs/ARCHITECTURE.md
 docs/MAINTENANCE.md
+
+docker-compose.yml

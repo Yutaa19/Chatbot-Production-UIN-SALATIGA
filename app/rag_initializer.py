@@ -1,7 +1,7 @@
 # app/rag_initializer.py
 from functools import lru_cache
 from qdrant_client import QdrantClient
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer, CrossEncoder
 import google.generativeai as genai
 
 from app.config import settings
@@ -23,6 +23,13 @@ def get_runtime_components():
     # --- 2. Model Embedding ---
     embedder = SentenceTransformer(settings.RAG.EMBEDDING_MODEL_NAME)
 
+    # 2. Muat Reranker (untuk Cross-Encoder) <<< BARU
+    reranker = CrossEncoder(
+            settings.RAG.RERANKER_MODEL_NAME,
+            cache_folder=settings.RAG.EMBEDDING_MODEL_PATH,
+            trust_remote_code=True
+        )
+
     # --- 3. Klien LLM (Gemini) ---
     genai.configure(api_key=settings.GEMINI_API_KEY)
     gemini_model = genai.GenerativeModel('gemini-2.5-flash')
@@ -32,4 +39,5 @@ def get_runtime_components():
         'embedder': embedder,
         'gemini_model': gemini_model,
         'collection_name': settings.RAG.COLLECTION_NAME,
+        "reranker": reranker
     }

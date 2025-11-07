@@ -3,7 +3,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 
-def create_dummy_pdf(filename="pt_freshveggies.pdf"):
+def create_dummy_pdf(filename="ukt.pdf"):
     # Pastikan folder 'data' ada
     data_dir = "data"
     if not os.path.exists(data_dir):
@@ -18,37 +18,100 @@ def create_dummy_pdf(filename="pt_freshveggies.pdf"):
     story = []
 
     content = """
-Pendidikan Profesi Guru (PPG) di UIN Salatiga dikenal sebagai entitas pendidikan tinggi yang memiliki peran sentral dalam membentuk dan melatih calon-calon guru profesional berintegritas. Misi utamanya adalah memberikan pembekalan yang holistik kepada para calon guru, meliputi aspek moral dan spiritualitas Islam. Dengan visi yang teguh untuk meningkatkan kualitas pendidikan di Indonesia, PPG UIN Salatiga diharapkan menjadi pusat pembentukan bagi generasi guru yang mampu memberikan dampak positif dan signifikan dalam meningkatkan mutu pendidikan nasional.
+# Informasi Pimpinan dan Struktur Organisasi Universitas Islam Negeri (UIN) Salatiga
 
-PPG UIN Salatiga menawarkan beragam program studi yang dirancang dengan cermat, memungkinkan eksplorasi konsep-konsep pedagogis terkini seiring dengan kemajuan ilmu pengetahuan dan teknologi. Kurikulum yang disusun mencakup empat pilar kompetensi utama: pedagogik, sosial, kepribadian, dan ilmu keislaman, yang diberikan secara holistik untuk memastikan para lulusan tidak hanya memiliki keterampilan teknis, tetapi juga fondasi moral dan keislaman yang kokoh.
+## Pimpinan Universitas (Rektorat)
 
-PPG UIN Salatiga, Menyemai Ilmu,Membangun Profesionalisme Guru
+Struktur pimpinan utama UIN Salatiga dipimpin oleh Rektor.
+Rektor UIN Salatiga adalah Prof. Dr. Zakiyyudin, M.Ag.
 
-Prof. Dr. Mansur, M.Ag (Ketua LPTK UIN Salatiga)
-Sejak berdirinya, PPG UIN Salatiga telah menjadi tempat berkembangnya pendidik berkualitas yang mampu beradaptasi dengan dinamika era pos-humanisme, terutama dalam konteks teknologi kecerdasan buatan. Prestasi dan kontribusi lulusan PPG UIN Salatiga telah diakui luas, menegaskan peran lembaga ini sebagai episentrum pendidikan dan motor penggerak perubahan dalam dunia pendidikan.
+Rektor dibantu oleh tiga Wakil Rektor dan Kepala Biro:
+1.  Wakil Rektor Bidang Administrasi Umum: Prof. Dr. Muh. Saerozi, M.Ag. (Beliau juga mengesahkan SOP Akademik).
+2.  Wakil Rektor Bidang Akademik dan Kelembagaan: Prof. Dr. Miftahuddin, M.Ag.
+3.  Wakil Rektor Bidang Kemahasiswaan, Alumni dan Kerjasama: Dr. Suwandi, S.Pd, M.Pd.
 
-Tidak hanya sebagai tempat inkubasi pendidik, PPG UIN Salatiga juga aktif dalam kegiatan riset dan inovasi, khususnya dalam bidang pedagogik. Dengan menyatukan teori dan praktik, lembaga ini berupaya memberikan kontribusi pada pengembangan ilmu pengetahuan pedagogik keislaman serta memperkuat landasan ilmiah dalam proses pembelajaran.
+Kepala Biro Umum, Akademik, Perencanaan, dan Keuangan (Biro UAPK) adalah Dr. H. Agus Suryo Suripto, S.Ag., M.H.
+Kepala Bagian Umum dan Akademik adalah M. Hidayatur Rohman, S.Pd., M.Sc.
 
-Dengan komitmen yang teguh terhadap profesionalisme dan nilai-nilai Islam, PPG UIN Salatiga telah menjadi pusat keunggulan dalam pendidikan profesi guru di Indonesia. Melalui pendekatan ilmiah dan holistik, lembaga ini tidak hanya mencetak generasi guru berkualitas, tetapi juga membuka ruang untuk eksplorasi dan pengembangan pengetahuan yang mendukung perubahan positif dalam dunia pendidikan.
+## Pimpinan Lembaga
 
-Sejarah Program Studi Pendidikan Profesi Guru (PPG) di Universitas Islam Negeri (UIN) Salatiga merupakan cerminan dari perubahan dan evolusi dalam sistem pendidikan Indonesia, yang senantiasa beradaptasi dengan dinamika zaman dan tuntutan masyarakat. Dalam menghadapi tantangan baru yang muncul dengan cepat dan tidak terduga, terutama dalam dunia pendidikan, penting bagi lembaga pendidikan untuk terus memperbarui diri guna menjawab kebutuhan masyarakat akan tenaga pendidik yang berkualitas.
+-   Ketua Lembaga Penjaminan Mutu (LPM) adalah Prof. Dr. Budiyono Saputro, M.Pd.
+-   Sekretaris Lembaga Penjaminan Mutu (LPM) adalah Dr. Nafis Irkami, M.Ag., M.A.
+-   Ketua Lembaga Penelitian dan Pengabdian Kepada Masyarakat (LP2M) adalah Hammam, M.Pd., Ph.D.
+-   Sekretaris LP2M adalah Ari Setiawan, S.Pd., M.M.
 
-Pada tanggal 6 Januari 2021, Menteri Agama Republik Indonesia mengeluarkan Surat Keputusan Nomor 72 tahun 2021, yang memberikan izin kepada UIN Salatiga untuk menyelenggarakan Program Studi Pendidikan Profesi Guru (PPG). Keputusan ini merupakan langkah strategis dalam menjawab kompleksitas tantangan pendidikan yang dihadapi bangsa, termasuk di antaranya meningkatkan kualitas pendidikan serta kesejahteraan guru.
+## Pimpinan Pascasarjana
 
-Visi: program Studi Pendidikan Profesi Guru di UIN Salatiga adalah:
+-   Direktur Pascasarjana adalah Prof. Dr. Phil Widianto, M.Ag., M.A.
 
-Menjadi pusat unggulan Program Studi Pendidikan Profesi Guru di bidang sains, teknologi, dan seni untuk keluhuran martabat kemanusiaan berbasis wasatiyah Islam pada tahun 2045.
+## Pimpinan Fakultas Tarbiyah dan Ilmu Keguruan (FTIK)
 
-Misi: program Studi Pendidikan Profesi Guru di UIN Salatiga melaksanakan misi sebagai berikut:
+-   Dekan FTIK adalah Prof. Dr. Rasimin, M.Ag.
+-   Wakil Dekan Bidang Akademik dan Kelembagaan FTIK adalah Dr. Fatchurrohman, S.Ag., M.Pd.
+-   Wakil Dekan Bidang Administrasi Umum, Perencanaan dan Keuangan FTIK adalah Norwanto, S.Pd., M.Hum., Ph.D.
+-   Wakil Dekan Bidang Kemahasiswaan, Alumni, dan Kerja Sama FTIK adalah Dr. Maslikhah, M.Si.
+-   Kepala Bagian Tata Usaha FTIK adalah Nidaul Hasanah, S.T., M.E.
+-   Ketua Program Studi (Kaprodi) Pendidikan Agama Islam (PAI) adalah Purnomo, M.Pd.I.
+-   Ketua Program Studi (Kaprodi) Pendidikan Bahasa Arab (PBA) adalah Wakhidati Nurrohmah Putri, M.Pd.I.
+-   Ketua Program Studi (Kaprodi) Tadris Bahasa Inggris (TBI) adalah Rr. Dewi Wahyu Mustikasari, S.S., M.Pd., Ph.D.
+-   Ketua Program Studi (Kaprodi) Pendidikan Guru Madrasah Ibtidaiyah (PGMI) adalah Wulan Izzatul Himmah, S.Pd., M.Pd.
+-   Ketua Program Studi (Kaprodi) Pendidikan Islam Anak Usia Dini (PIAUD) adalah M. Agung Hidayatulloh, S.S., M.Pd.I.
+-   Ketua Program Studi (Kaprodi) Tadris Matematika adalah Prof. Dr. Winarno, S.Si., M.Pd.
+-   Ketua Program Studi (Kaprodi) Tadris IPA adalah Dr. Peni Susapti, S.Si., M.Si.
+-   Ketua Program Studi (Kaprodi) Bimbingan dan Konseling Pendidikan Islam (BKPI) adalah Dr. Wahidin, M.Pd.
+-   Ketua Program Studi (Kaprodi) Pendidikan Profesi Guru (PPG) adalah Imam Subqi, M.S.I.
+-   Ketua Program Studi (Kaprodi) Sains Data adalah Enika Wulandari, M.Pd.
 
-a. Menyelenggarakan program pendidikan profesi guru keagamaan yang berkualitas, akuntabel, dan amanah, dengan memastikan penyelenggaraan pembelajaran yang inovatif dan berbasis kebutuhan zaman.
+## Pimpinan Fakultas Syariah
 
-b. Melaksanakan penelitian dan pengabdian dalam upaya meningkatkan profesionalitas guru dan pembinaannya secara berkelanjutan dan kredibel, dengan fokus pada pengembangan metode pengajaran yang efektif serta implementasi praktik terbaik dalam bidang pendidikan keagamaan.
+-   Dekan Fakultas Syariah adalah Prof. Dr. Ilyya Muhsin, M.Si.
+-   Wakil Dekan Bidang Akademik dan Kelembagaan Fakultas Syariah adalah Dr. Farkhani, S.H., S.H.I, M.H.
+-   Wakil Dekan Bidang Administrasi Umum, Perencanaan dan Keuangan Fakultas Syariah adalah Dr. Siti Zumrotun, M.Ag.
+-   Wakil Dekan Bidang Kemahasiswaan, Alumni, dan Kerja Sama Fakultas Syariah adalah Sukron Ma'mun, Ph.D.
+-   Kepala Bagian Tata Usaha Fakultas Syariah adalah Dra. Astuti Sakdiyah, M.Pd.
+-   Ketua Program Studi (Kaprodi) Hukum Keluarga Islam (HKI) adalah Ahmadi Hasanudin Dardiri, M.H.
+-   Ketua Program Studi (Kaprodi) Hukum Ekonomi Syari'ah (HES) adalah Endang Sriani, M.H.
+-   Ketua Program Studi (Kaprodi) Hukum Tata Negara (HTN) adalah Cholida Hanum, M.H.
 
-c. Menyediakan media publikasi ilmiah dan fasilitasnya untuk meningkatkan keterampilan guru keagamaan yang profesional, dengan tujuan memfasilitasi pertukaran pengetahuan dan pengalaman antar para praktisi pendidikan keagamaan serta mendorong terciptanya lingkungan akademik yang inspiratif dan kolaboratif.
+## Pimpinan Fakultas Dakwah
 
-Dengan visi dan misi ini, Program Studi Pendidikan Profesi Guru di UIN Salatiga bertekad untuk menjadi garda terdepan dalam mencetak guru-guru yang tidak hanya berkualitas dalam bidang sains, teknologi, dan seni, tetapi juga memiliki komitmen tinggi terhadap nilai-nilai wasatiyah Islam dan mengabdi pada kemajuan pendidikan serta kemartabatan kemanusiaan.
+-   Dekan Fakultas Dakwah adalah Prof. Dr. Adang Kuswaya, M.Ag.
+-   Wakil Dekan Bidang Akademik dan Kelembagaan Fakultas Dakwah adalah Dr. Abdul Aziz, N.P, M.M.
+-   Wakil Dekan Bidang Administrasi Umum, Perencanaan dan Keuangan Fakultas Dakwah adalah Dr. Muna Erawati, M.Si.
+-   Wakil Dekan Bidang Kemahasiswaan dan Kerjasama Fakultas Dakwah adalah Rovi'in, M.Ag.
+-   Kepala Bagian Tata Usaha Fakultas Dakwah adalah Muh. Amin, M.M.
+-   Ketua Program Studi (Kaprodi) Komunikasi & Penyiaran Islam (KPI) adalah Rr. Wuri Arenggoasih, M.I.Kom.
+-   Ketua Program Studi (Kaprodi) Manajemen Dakwah (MD) adalah Sutrisno, M.Pd.I.
+-   Ketua Program Studi (Kaprodi) Psikologi Islam (PI) adalah Sya'ban Maghfur, M.Pd.I.
+-   Ketua Program Studi (Kaprodi) Pengembangan Masyarakat Islam (PMI) adalah Dra. Sri Suparwi, M.A.
+-   Ketua Program Studi (Kaprodi) Teknologi Informasi (TI) adalah Juwita Artanti K, M.Cs.
 
+## Pimpinan Fakultas Ushuluddin, Adab, dan Humaniora (FUADAH)
+
+-   Dekan FUADAH adalah Prof. Dr. Supardi, M.A.
+-   Wakil Dekan I FUADAH adalah Prof. Dr. Benny Ridwan, M.Hum.
+-   Wakil Dekan II FUADAH adalah Dr. M. Guron, M.Ag.
+-   Wakil Dekan III FUADAH adalah Drs. Abdul Syukur, M.Si.
+-   Kepala Bagian Tata Usaha FUADAH adalah Heru Heriyanto, S.E.
+-   Ketua Program Studi (Kaprodi) Sejarah Peradaban Islam (SPI) adalah A. Faidi, M.Hum.
+-   Ketua Program Studi (Kaprodi) Ilmu Al-Qur'an dan Tafsir (IAT) adalah Farid Hasan, M.Hum.
+-   Ketua Program Studi (Kaprodi) Bahasa dan Sastra Arab (BSA) adalah Dr. Sri Guno Najib Chaqoqo, M.A.
+-   Ketua Program Studi (Kaprodi) Ilmu Hadis (IH) adalah Ulfi Putra Sany, M.Hum.
+-   Ketua Program Studi (Kaprodi) Aqidah dan Filsafat Islam (AFI) adalah Erkham Maskuri, Lc., M.S.I.
+-   Ketua Program Studi (Kaprodi) Perpustakaan dan Sains Informasi (PSI) adalah Suryanto, M.A.
+
+## Pimpinan Fakultas Ekonomi dan Bisnis Islam (FEBI)
+
+-   Dekan FEBI adalah Prof. Dr. Agus Waluyo, M.Ag.
+-   Wakil Dekan Bidang Akademik dan Kelembagaan FEBI adalah Dr. Fetria Eka Yudiana, M.Si.
+-   Wakil Dekan Bidang Administrasi Umum, Perencanaan dan Keuangan FEBI adalah Dr. Qi Mangku Bahjatulloh, Lc., M.SI.
+-   Wakil Dekan Bidang Kemahasiswaan, Alumni, dan Kerja Sama FEBI adalah Dr. Faqih Nabhan, S.E., M.M.
+-   Kepala Bagian Tata Usaha FEBI adalah Umi Sahil, S.E., M.M.
+-   Ketua Program Studi (Kaprodi) Ekonomi Syariah adalah Emy Widyastuti, M.E.
+-   Ketua Program Studi (Kaprodi) Perbankan Syariah adalah Nur Huri Mustofa, S.Ag., M.SI.
+-   Ketua Program Studi (Kaprodi) Akuntansi Syariah adalah Yusvita Nena Arinta, M.Si.
+-   Ketua Program Studi (Kaprodi) Manajemen Bisnis Syariah adalah Diyah Ariyani, M.A.
+-   Ketua Program Studi (Kaprodi) Bisnis Digital adalah Saifudin, M.E.
     """
 
     for line in content.split("\n\n"):
@@ -59,4 +122,4 @@ Dengan visi dan misi ini, Program Studi Pendidikan Profesi Guru di UIN Salatiga 
     print(f"PDF berhasil disimpan di: {filepath}")
 
 if __name__ == "__main__":
-    create_dummy_pdf("prodi_ppg.pdf")
+    create_dummy_pdf("pimpinan all fakultas.pdf")

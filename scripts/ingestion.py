@@ -1,10 +1,16 @@
 # app/scripts/ingestion.py
+# REVISI FINAL - Arsitektur Hibrida (Teks, PDF, Tabel)
+# DENGAN NLP PREPROCESSING & CONTEXT-AWARE CHUNKING
+# VERSI 2.0: MENGGUNAKAN SEMANTIC CHUNKER (SOLUSI B)
+
 import uuid
 import re
 import hashlib
 import os
 import sys
+import logging
 from pathlib import Path
+from typing import List, Dict, Any
 
 # === 1. SET PATH ROOT ===
 current_file_path = os.path.abspath(__file__)
@@ -14,203 +20,384 @@ root_dir = os.path.dirname(scripts_dir)
 if root_dir not in sys.path:
     sys.path.insert(0, root_dir)
 
-# === 2. LOAD ENV & INTERNAL MODULES ===
+# === 2. KONFIGURASI ===
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
 from dotenv import load_dotenv
 load_dotenv()
 
-from app.config import settings
+try:
+    from app.config import settings
+except ImportError:
+    logger.error("Gagal mengimpor 'app.config'. Pastikan PYTHONPATH sudah benar.")
+    sys.exit(1)
 
-# === 3. EXTERNAL DEPENDENCIES ===
-from llama_index.readers.file import PDFReader
-from sentence_transformers import SentenceTransformer
+# === 3. DEPENDENSI EKSTERNAL ===
+import pandas as pd
+from bs4 import BeautifulSoup
+import requests
+import numpy as np
+
+# [DIUBAH] Kita ganti dependensi ke stack LlamaIndex murni
+from llama_index.core.node_parser import SemanticSplitterNodeParser
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding # <-- [FIX] Path yang benar
+from llama_index.core import Document                     # <-- [BARU] Dibutuhkan oleh SemanticChunker
+from llama_index.readers.file import PDFReader# <-- [BARU] Pengganti SentenceTransformer
 from qdrant_client import QdrantClient
 from qdrant_client.models import VectorParams, Distance, PointStruct
 
-# NLP untuk smart chunking
-import nltk
-nltk.download('punkt', quiet=True)
-
-# ================= HELPER FUNCTIONS =================
-
-def extract_text_from_pdf_llamaindex(pdf_path):
-    print("\n[1] Ekstraksi PDF dengan LlamaIndex...")
-    if not os.path.exists(pdf_path):
-        print(f"  File tidak ditemukan: {pdf_path}")
+# ===================================================================
+# FUNGSI NLP PREPROCESSING (Pembersih Teks)
+# ===================================================================
+def preprocess_text_with_nlp(text: str) -> str:
+    """
+    Membersihkan teks mentah dari PDF menggunakan regex.
+    (Fungsi ini tidak berubah, sudah bagus)
+    """
+    if not text:
         return ""
-    loader = PDFReader()
-    documents = loader.load_data(file=Path(pdf_path))
-    full_text = "\n".join([doc.text for doc in documents])
-    page_count = len(documents)
-    print(f"  Ekstraksi selesai, total {page_count} dokumen.")
-    return full_text
+    # 1. Ganti baris baru yang diikuti huruf kecil dengan spasi
+    text = re.sub(r'\n(?=[a-z])', ' ', text)
+    # 2. Hapus spasi berlebih atau tab
+    text = re.sub(r'[ \t]+', ' ', text)
+    # 3. Hapus baris baru yang berlebihan (lebih dari 2)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    # 4. Hapus spasi di awal/akhir baris
+    text = "\n".join([line.strip() for line in text.split('\n')])
+    # 5. Hapus kata-kata yang terlalu pendek (noise)
+    text = " ".join([word for word in text.split() if len(word) > 1])
+    return text.strip()
 
-def extract_text_from_web_async(urls):
-    from llama_index.readers.web import TrafilaturaWebReader
-    cleaned_urls = [url.strip() for url in urls if url.strip().startswith("http")]
-    if not cleaned_urls:
-        print("\n[1.1] Tidak ada URL valid untuk diekstrak.")
-        return ""
-    print(f"\n[1.1] Ekstraksi dari {len(cleaned_urls)} URL (async)...")
-    reader = TrafilaturaWebReader()
-    try:
-        documents = reader.load_data(urls=cleaned_urls)
-        full_text = "\n".join([doc.text for doc in documents])
-        print("  Ekstraksi web selesai.")
-        return full_text
-    except Exception as e:
-        print(f"  Gagal ekstrak web: {e}")
-        return ""
-
-def clean_text(raw_text):
-    if not raw_text:
-        return ""
-    cleaned = re.sub(r'\*\*(.*?)\*\*', r'\1', raw_text)
-    cleaned = re.sub(r'\s+', ' ', cleaned)
-    cleaned = re.sub(r'[:=]+', ' ', cleaned)
-    cleaned = re.sub(r'\s+', ' ', cleaned)
-    return cleaned.strip()
-
-
-def smart_chunk_semantic(text: str, max_chunk_size: int = 512, overlap: int = 64) -> list:
-    """Chunk berbasis batas kalimat (NLP-aware)."""
-    if not text.strip():
+# ===================================================================
+# LANGKAH 1: EKSTRAKSI KONTEN (Extractor Hibrida)
+# ===================================================================
+#
+# Fungsi extract_pdf, extract_web_tables, dan extract_web_article
+# ANDA TIDAK BERUBAH. Semuanya sudah bagus dan
+# menghasilkan format List[Dict] yang kita inginkan.
+#
+def extract_pdf(file_path: str) -> List[Dict[str, Any]]:
+    logger.info(f"[EXTRACT-PDF] Memproses: {file_path}")
+    if not os.path.exists(file_path):
+        logger.warning(f"   File PDF tidak ditemukan: {file_path}")
         return []
-    paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
-    chunks = []
-    current_chunk = ""
+    loader = PDFReader()
+    documents = loader.load_data(file=Path(file_path))
+    metadata = {
+        "source_file": os.path.basename(file_path),
+        "content_type": "pdf_document"
+    }
+    processed_nodes = []
+    for doc in documents:
+        cleaned_text = preprocess_text_with_nlp(doc.text)
+        processed_nodes.append({"text": cleaned_text, "metadata": metadata})
+    return processed_nodes
 
-    for para in paragraphs:
-        sentences = nltk.sent_tokenize(para)
-        for sent in sentences:
-            test = (current_chunk + " " + sent).strip()
-            if len(test) <= max_chunk_size or not current_chunk:
-                current_chunk = test
-            else:
-                if current_chunk:
-                    chunks.append(current_chunk)
-                current_chunk = sent
-    if current_chunk:
-        chunks.append(current_chunk)
+def extract_web_tables(url: str) -> List[Dict[str, Any]]:
+    logger.info(f"[EXTRACT-TABLE] Mencari tabel di: {url}")
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        tables_df_list = pd.read_html(requests.get(url, headers=headers).text)
+    except ValueError as e:
+        logger.warning(f"   Tidak ada tabel ditemukan di {url}. (Error: {e})")
+        return []
+    except Exception as e:
+        logger.error(f"   Gagal mengambil URL {url}. (Error: {e})")
+        return []
+    nodes = []
+    for i, df in enumerate(tables_df_list):
+        if df.empty or len(df.columns) < 2:
+            continue
+        logger.info(f"   Memproses Tabel #{i+1} (Ukuran: {df.shape})")
+        for _, row in df.iterrows():
+            row_text_parts = []
+            for col_name in df.columns:
+                cell_value = row[col_name]
+                if pd.notna(cell_value):
+                    row_text_parts.append(f"{col_name}: {cell_value}")
+            contextual_chunk = ". ".join(row_text_parts)
+            if contextual_chunk:
+                metadata = {
+                    "source_url": url,
+                    "content_type": "web_table_row",
+                    "table_index": i
+                }
+                nodes.append({"text": contextual_chunk, "metadata": metadata})
+    logger.info(f"   Total {len(nodes)} baris tabel (node) diekstrak dari {url}")
+    return nodes
 
-    # Tambahkan overlap
-    if overlap > 0 and len(chunks) > 1:
-        overlapped = []
-        for i, chunk in enumerate(chunks):
-            if i == 0:
-                overlapped.append(chunk)
-            else:
-                prev_words = chunks[i-1].split()[-overlap//5:]
-                new_chunk = " ".join(prev_words + chunk.split())
-                overlapped.append(new_chunk)
-        chunks = overlapped
-    return chunks
+def extract_web_article(url: str) -> List[Dict[str, Any]]:
+    logger.info(f"[EXTRACT-ARTICLE] Mengekstrak artikel dari: {url}")
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        response = requests.get(url, headers=headers, timeout=10)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        for element in soup(["script", "style", "nav", "footer", "header", "aside"]):
+            element.decompose()
+        main_content = soup.find("main") or soup.find("article") or soup.body
+        if not main_content:
+            logger.warning(f"   Tidak ada konten utama ditemukan di {url}")
+            return []
+        text = main_content.get_text(separator="\n", strip=True)
+        cleaned_text = preprocess_text_with_nlp(text)
+        metadata = {
+            "source_url": url,
+            "content_type": "web_article",
+            "title": soup.title.string.strip() if soup.title else "Tanpa Judul"
+        }
+        return [{"text": cleaned_text, "metadata": metadata}]
+    except Exception as e:
+        logger.error(f"   Gagal mengekstrak artikel dari {url}. (Error: {e})")
+        return []
 
+# ===================================================================
+# LANGKAH 2: CHUNKING & PREPROCESSING
+# ===================================================================
 
-def get_chunk_id(text: str) -> str:
-    return hashlib.md5(text.encode("utf-8", errors="ignore")).hexdigest()
+# [DIUBAH] Fungsi smart_chunk_nodes diganti total dengan Solusi B
+def smart_chunk_nodes_semantic(
+    nodes: List[Dict[str, Any]], 
+    embed_model: HuggingFaceEmbedding,
+    breakpoint_percentile: int = 95
+) -> List[Dict[str, Any]]:
+    """
+    DI-UPGRADE: Menggunakan SemanticChunker (Solusi B)
+    Memecah node berdasarkan PERUBAHAN MAKNA (topik).
+    """
+    logger.info(f"[CHUNKING-SEMANTIC] Memulai 'Semantic chunking' pada {len(nodes)} node mentah...")
 
+    # 1. Buat si pemotong "sangat pintar"
+    # Dia menggunakan model embedding untuk "merasakan" perubahan topik
+    semantic_parser = SemanticSplitterNodeParser(
+        embed_model=embed_model,
+        breakpoint_percentile_threshold=breakpoint_percentile
+    )
+    
+    docs_to_chunk = []
+    final_chunks = [] # Untuk menyimpan dict hasil
+    
+    # 2. Pisahkan data tabel (wajib) dan konversi sisanya
+    for node in nodes:
+        # PENTING: Jangan chunking data tabel yang sudah kita proses per baris!
+        if node["metadata"]["content_type"] == "web_table_row":
+            final_chunks.append(node)
+            continue
+        
+        text = node["text"]
+        if not text.strip():
+            continue
+        
+        # Ubah format dict Anda -> LlamaIndex Document
+        # SemanticChunker membutuhkan ini
+        docs_to_chunk.append(
+            Document(text=text, metadata=node["metadata"])
+        )
+
+    if not docs_to_chunk:
+         logger.warning("   Tidak ada dokumen (non-tabel) untuk di-chunk secara semantik.")
+    else:
+        # 3. Jalankan chunker pada dokumen (PDF/Artikel)
+        logger.info(f"   Memproses {len(docs_to_chunk)} dokumen (PDF/Artikel) dengan SemanticChunker...")
+        
+        # Ini adalah proses 'pintar' yang membandingkan makna kalimat
+        chunked_nodes_objects = semantic_parser.get_nodes_from_documents(docs_to_chunk)
+        
+        # 4. Konversi balik format LlamaIndex Node -> dict
+        for lmi_node in chunked_nodes_objects:
+            final_chunks.append({
+                "text": lmi_node.get_content(), # .get_content() adalah cara LlamaIndex
+                "metadata": lmi_node.metadata   # Metadata tetap terbawa
+            })
+            
+    logger.info(f"   Chunking selesai. Total node akhir: {len(final_chunks)}")
+    return final_chunks
+
+def clean_and_hash(nodes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Membersihkan teks akhir dan memberi ID unik.
+    (Fungsi ini tidak berubah, sudah bagus)
+    """
+    logger.info(f"[CLEANING] Membersihkan dan memberi ID pada {len(nodes)} node...")
+    cleaned_nodes = []
+    for node in nodes:
+        cleaned_text = re.sub(r'\s+', ' ', node["text"]).strip()
+        if len(cleaned_text) < 20: # Hapus chunk yang terlalu pendek
+            continue
+        node["id"] = hashlib.md5(cleaned_text.encode("utf-8")).hexdigest()
+        node["text"] = cleaned_text
+        cleaned_nodes.append(node)
+    return cleaned_nodes
+
+# ===================================================================
+# LANGKAH 3: EMBEDDING & STORAGE
+# ===================================================================
+
+# [DIUBAH] Mengganti SentenceTransformer dengan wrapper LlamaIndex
 def get_embedder(model_name=settings.RAG.EMBEDDING_MODEL_NAME):
-    print(f"\n[4] Loading embedding model: {model_name}")
-    return SentenceTransformer(model_name)
-
-def store_to_qdrant(chunks, embeddings, collection_name, batch_size=50):
-    print(f"\n[5] Menyimpan embedding ke Qdrant (mode: append)...")
-    client = QdrantClient(
-        url=settings.RAG.QDRANT_URL,
-        api_key=settings.RAG.QDRANT_API_KEY,
-        timeout=30
+    """
+    Memuat model embedding menggunakan wrapper HuggingFaceEmbedding dari LlamaIndex.
+    """
+    logger.info(f"[EMBEDDER] Memuat model embedding LlamaIndex: {model_name}")
+    # Ini adalah objek LlamaIndex, BUKAN SentenceTransformer
+    return HuggingFaceEmbedding(
+        model_name=model_name,
+        cache_folder=settings.RAG.EMBEDDING_MODEL_PATH,
+        trust_remote_code=True, # Sesuai settingan lama Anda
+        # device= 'cuda' # Uncomment jika Anda punya GPU
     )
 
-    embedding_size = len(embeddings[0]) if len(embeddings) > 0 else 768
-    collections = client.get_collections().collections
-    collection_names = [col.name for col in collections]
-
-    if collection_name not in collection_names:
-        client.create_collection(
-            collection_name=collection_name,
-            vectors_config=VectorParams(size=embedding_size, distance=Distance.COSINE)
+def store_to_qdrant(nodes: List[Dict[str, Any]], embeddings, collection_name: str, batch_size: int = 64):
+    """
+    Menyimpan/memperbarui node ke Qdrant.
+    (Fungsi ini tidak berubah, sudah bagus)
+    """
+    logger.info(f"[QDRANT] Memulai proses 'upsert' untuk {len(nodes)} node ke koleksi '{collection_name}'...")
+    
+    try:
+        client = QdrantClient(
+            url=settings.RAG.QDRANT_URL,
+            api_key=settings.RAG.QDRANT_API_KEY,
+            timeout=30
         )
-        print(f"  Collection '{collection_name}' dibuat.")
-    else:
-        print(f"  Collection '{collection_name}' sudah ada. Menambahkan data...")
+        
+        embedding_size = len(embeddings[0]) if len(nodes) > 0 else 768
+        
+        try:
+            client.get_collection(collection_name=collection_name)
+            logger.info(f"   Koleksi '{collection_name}' sudah ada. Melanjutkan dengan mode 'upsert'.")
+        except Exception:
+            logger.warning(f"   Koleksi '{collection_name}' tidak ditemukan. Membuat koleksi baru...")
+            client.create_collection(
+                collection_name=collection_name,
+                vectors_config=VectorParams(size=embedding_size, distance=Distance.COSINE)
+            )
+            logger.info(f"   Koleksi '{collection_name}' berhasil dibuat.")
 
-    if not chunks:
-        print("  Tidak ada chunk untuk disimpan.")
+        total = len(nodes)
+        for i in range(0, total, batch_size):
+            batch_nodes = nodes[i:i + batch_size]
+            batch_embeddings = embeddings[i:i + batch_size]
+            
+            points = [
+                PointStruct(
+                    id=node["id"], # Gunakan ID HASH
+                    vector=emb, # LlamaIndex sudah memberi list, .tolist() tidak perlu
+                    payload={
+                        "text": node["text"],
+                        "metadata": node["metadata"]
+                    },
+                )
+                for node, emb in zip(batch_nodes, batch_embeddings)
+            ]
+            
+            try:
+                client.upsert(
+                    collection_name=collection_name, 
+                    points=points, 
+                    wait=True
+                )
+                logger.info(f"   Batch {i//batch_size + 1}/{total//batch_size + 1}: simpan {len(points)} node")
+            except Exception as e:
+                logger.error(f"   Gagal upsert batch (batch {i//batch_size + 1}): {e}")
+                
+        logger.info(f"\n=== INGESTION BERHASIL: Total {total} node disimpan/diperbarui di '{collection_name}' ===")
         return client
 
-    total = len(chunks)
-    for i in range(0, total, batch_size):
-        batch_chunks = chunks[i:i + batch_size]
-        batch_embeddings = embeddings[i:i + batch_size]
-        points = [
-            PointStruct(
-                id=get_chunk_id(chunk),
-                vector=emb.tolist(),
-                payload={"text": chunk},
-            )
-            for chunk, emb in zip(batch_chunks, batch_embeddings)
-        ]
-        client.upsert(collection_name=collection_name, points=points)
-        print(f"  Batch {i//batch_size + 1}: simpan {len(points)} chunks")
-
-    print(f"\n=== INGESTION BERHASIL: {total} chunks ===")
-    return client
-
-# ================= MAIN =================
-if __name__ == "__main__":
-    PDF_FILES = [
-    
-    ]
-
-
-    WEB_URLS = [
-        "https://www.uinsalatiga.ac.id/pengabdian-kepada-masyarakat/",
-        "https://www.uinsalatiga.ac.id/unit-kegiatan-mahasiswa/"
-    ]
-
-    COLLECTION_NAME = "uin_knowledge_base"
-
-    print(f"\n================ STARTING RAG INGESTION ({COLLECTION_NAME}) ================")
-
-    all_chunks = []
-
-    # === Proses PDF ===
-    for f in PDF_FILES:
-        try:
-            text = extract_text_from_pdf_llamaindex(f)
-            if not text.strip():
-                continue
-            else:
-                chunks = smart_chunk_semantic(text, max_chunk_size=512, overlap=64)
-            all_chunks.extend(chunks)
-        except Exception as e:
-            print(f"  Gagal baca {f}: {e}")
-
-    # === Proses Web ===
-    try:
-        web_text = extract_text_from_web_async(WEB_URLS)
-        if web_text.strip():
-            web_chunks = smart_chunk_semantic(web_text, max_chunk_size=512, overlap=64)
-            all_chunks.extend(web_chunks)
     except Exception as e:
-        print(f"  Gagal ekstrak web: {e}")
+        logger.critical(f"[QDRANT] Gagal terhubung ke Qdrant di {settings.RAG.QDRANT_URL}. Error: {e}")
+        return None
 
-    if not all_chunks:
-        print("\n=== TIDAK ADA DATA UNTUK DIINGEST ===")
-        exit(0)
+# ===================================================================
+# MAIN EXECUTION (CONTROL PANEL)
+# ===================================================================
+if __name__ == "__main__":
+    
+    # --- KONTROL FILE ANDA ---
+    DATA_SOURCES = [
+        {"type": "web_article", "url": "https://uinsalatiga.id/pimpinan/"},
+        {"type": "web_table", "url": "https://pmb.uinsalatiga.ac.id/uang-kuliah-tunggal/"},
+        {"type": "pdf", "path": os.path.join(root_dir, "data", "Rincian UKT UIN Salatiga 2025-2026.pdf")},
+    ]
+    
+    COLLECTION_NAME = settings.RAG.COLLECTION_NAME
+    
+    # [DIUBAH] Variabel chunking lama tidak dipakai, SemanticChunker punya setting sendiri
+    # CHUNK_SIZE = 512 
+    # CHUNK_OVERLAP = 64
+    SEMANTIC_BREAKPOINT = 95 # Sensitivitas (0-100). 95 itu standar.
 
-    print(f"\n[3] Total chunks siap di-encode: {len(all_chunks)}")
+    logger.info(f"================ STARTING RAG INGESTION ({COLLECTION_NAME}) ================")
+    
+    # --- PENTING: HAPUS KOLEKSI LAMA ---
+    logger.warning(f"PERINGATAN: Menghapus koleksi '{COLLECTION_NAME}' yang ada untuk memulai dari awal yang bersih.")
+    try:
+        client = QdrantClient(url=settings.RAG.QDRANT_URL, api_key=settings.RAG.QDRANT_API_KEY)
+        client.delete_collection(collection_name=COLLECTION_NAME)
+        logger.info(f"Koleksi lama '{COLLECTION_NAME}' telah dihapus.")
+    except Exception as e:
+        logger.info(f"Tidak dapat menghapus koleksi lama (mungkin belum ada): {e}")
+
+    all_raw_nodes = []
+    
+    # === LANGKAH 1: EKSTRAKSI HIBRIDA ===
+    for job in DATA_SOURCES:
+        try:
+            if job.get("url") == "" or job.get("path") == "": continue
+            if job["type"] == "pdf":
+                all_raw_nodes.extend(extract_pdf(job["path"]))
+            elif job["type"] == "web_table":
+                all_raw_nodes.extend(extract_web_tables(job["url"]))
+            elif job["type"] == "web_article":
+                all_raw_nodes.extend(extract_web_article(job["url"]))
+        except Exception as e:
+            logger.error(f"Gagal memproses job: {job}. Error: {e}")
+
+    if not all_raw_nodes:
+        logger.error("\n=== TIDAK ADA DATA UNTUK DIINGEST. Berhenti. ===")
+        sys.exit(1)
 
     try:
+        # === [BARU] LANGKAH 2: MEMUAT EMBEDDER (DIPINDAHKAN KE ATAS) ===
+        # Semantic Chunker membutuhkan ini SEBELUM chunking
+        logger.info("\n[STEP 2] Memuat model embedding (dibutuhkan untuk chunking & encoding)...")
         embedder = get_embedder()
-        embeddings = embedder.encode(all_chunks, convert_to_tensor=False)
+
+        # === [DIUBAH] LANGKAH 3: CHUNKING & CLEANING ===
+        logger.info("\n[STEP 3] Memulai chunking dan pembersihan...")
+        chunked_nodes = smart_chunk_nodes_semantic(
+            all_raw_nodes, 
+            embed_model=embedder,
+            breakpoint_percentile=SEMANTIC_BREAKPOINT
+        )
+        final_nodes = clean_and_hash(chunked_nodes)
+
+        if not final_nodes:
+            logger.error("\n=== TIDAK ADA CHUNK VALID SETELAH DIPROSES. Berhenti. ===")
+            sys.exit(1)
+
+        logger.info(f"\n[FINAL] Total node siap di-embed: {len(final_nodes)}")
+
+        # === [DIUBAH] LANGKAH 4: EMBEDDING & STORAGE ===
+        logger.info("\n[STEP 4] Memulai encoding... (Ini mungkin butuh waktu lama)")
+        texts_to_encode = [node["text"] for node in final_nodes]
+        
+        # [DIUBAH] Kita gunakan method dari 'HuggingFaceEmbedding'
+        # Bukan .encode() lagi, tapi .get_text_embedding_batch()
+        embeddings = embedder.get_text_embedding_batch(
+            texts_to_encode, 
+            show_progress_bar=True
+        )
+        
+        logger.info("Encoding selesai.")
+        
         client = store_to_qdrant(
-            chunks=all_chunks,
+            nodes=final_nodes,
             embeddings=embeddings,
             collection_name=COLLECTION_NAME
         )
-        print("\n=== INGESTION SELESAI DENGAN AMAN ===")
+        logger.info("\n=== INGESTION SELESAI DENGAN AMAN ===")
+        
     except Exception as e:
-        print(f"\n=== ERROR SAAT INGESTION ===")
-        print(f"Detail: {e}")
-        exit(1)
+        logger.critical(f"\n=== ERROR KRITIS SAAT INGESTION ===", exc_info=True)
+        sys.exit(1)
