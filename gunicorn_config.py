@@ -1,23 +1,42 @@
-# gunicorn.conf.py
+# gunicorn_config.py (REVISI FINAL - Performa Tinggi)
 import os
 
-bind = "127.0.0.1:8000"  # Hanya bind ke localhost (Nginx sebagai reverse proxy)
-workers = 2              # 2 worker untuk 2 vCPU
+# --- KONEKSI ---
+# WAJIB '0.0.0.0' agar bisa menerima koneksi dari host Docker
+bind = "0.0.0.0:8000"
+
+# --- PERFORMA (INI KUNCINYA) ---
+
+# 1. Worker Class: 'gevent'
+#    Kita pakai 'gevent' (yang sudah diinstal)
+#    Ini adalah worker 'ajaib' yang non-blocking.
 worker_class = "gevent"
-timeout = 90
+
+# 2. Workers: (Jumlah Koki)
+#    Ini adalah jumlah prosesor (CPU) yang dipakai.
+#    '2' sudah cukup untuk memulai di server 2 vCPU.
+workers = 2
+
+# 3. Worker Connections: (Jumlah Tangan per Koki)
+#    INI YANG AKAN MENANGANI 500 PERMINTAAN BERSAMAAN.
+#    Artinya, SETIAP 1 worker bisa menangani 1000 koneksi
+#    yang sedang "menunggu" (I/O bound) secara bersamaan.
+worker_connections = 1000
+
+# 4. Pengaturan Lainnya
+timeout = 90         # Waktu tunggu maks untuk 1 request (menunggu Gemini)
 keepalive = 5
 max_requests = 400
 max_requests_jitter = 40
 preload_app = False
+worker_tmp_dir = "/dev/shm"
 
-# Logging
-log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
-accesslog = os.path.join(log_dir, "gunicorn_access.log")
-errorlog = os.path.join(log_dir, "gunicorn_error.log")
+# --- LOGGING (Standar Docker) ---
+# Mengirim log ke STDOUT/STDERR agar 'docker logs' bisa menangkapnya
 loglevel = "info"
-capture_output = True
+capture_output = True 
 
-# Security
+# --- SECURITY ---
+# (Opsional) Dockerfile kita sudah menangani ini
 user = "chatbot"
 group = "chatbot"
-worker_tmp_dir = "/dev/shm"

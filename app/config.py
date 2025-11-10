@@ -14,7 +14,6 @@ class RAGSettings(BaseSettings):
     COLLECTION_NAME: str = Field(default="uin_knowledge_base") 
     RERANKER_MODEL_NAME: str = Field(default="cross-encoder/ms-marco-minilm-l-6-v2") # <<< BARU
     RERANKER_THRESHOLD: float = 0.3 # <<< BARU (Skor reranker beda, 0.1 sdh bagus)
-    SPACY_MODEL_NAME: str = Field(default="id_core_news_md")
     EMBEDDING_MODEL_PATH: str = "/app/models_cache"
 class AppConfig(BaseSettings):
     GEMINI_API_KEY: str

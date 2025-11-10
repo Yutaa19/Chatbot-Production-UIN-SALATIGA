@@ -1,28 +1,45 @@
-# deployment/systemd/chatbot.service
-# Jalankan di: /etc/systemd/system/chatbot.service
+# ===================================================================
+# UIN Salatiga Chatbot - Systemd Service (REVISI FINAL + .env)
+# Lokasi: /etc/systemd/system/chatbot.service
+# ===================================================================
 
 [Unit]
-Description=UIN Salatiga RAG Chatbot
+Description=UIN Salatiga RAG Chatbot Service
+# Memastikan layanan ini jalan setelah jaringan dan Redis siap
 After=network.target redis.service
 
 [Service]
 Type=exec
-User=chatbot
-Group=chatbot
-WorkingDirectory=/home/chatbot/chatbot-rag-uin-salatiga
-Environment=FLASK_ENV=production
-ExecStart=/home/chatbot/chatbot-rag-uin-salatiga/venv/bin/gunicorn -c gunicorn.conf.py wsgi:application
 Restart=always
 RestartSec=10
 TimeoutStopSec=60
 
-# Resource limits (aman untuk KVM2)
+# --- PENGATURAN SPESIFIK APLIKASI ---
+
+# 1. User & Group (WAJIB DIBUAT: sudo adduser chatbot)
+User=chatbot
+Group=chatbot
+
+# 2. Path Proyek (WAJIB SAMA PERSIS)
+WorkingDirectory=/home/chatbot/chatbot-production-uin-salatiga
+
+# 3. Kunci Rahasia / Environment Variables (KRUSIAL)
+# Ini memberitahu systemd untuk memuat semua kunci dari file .env
+Environment=FLASK_ENV=production
+EnvironmentFile=/home/chatbot/chatbot-production-uin-salatiga/.env
+
+# 4. Perintah Eksekusi (PALING KRUSIAL)
+# Menjalankan Gunicorn dari 'venv' dan menggunakan 'gunicorn_config.py'
+ExecStart=/home/chatbot/chatbot-production-uin-salatiga/venv/bin/gunicorn -c gunicorn_config.py wsgi:application
+
+# 5. Logging (WAJIB DIBUAT FOLDERNYA: mkdir logs)
+StandardOutput=append:/home/chatbot/chatbot-production-uin-salatiga/logs/gunicorn_access.log
+StandardError=append:/home/chatbot/chatbot-production-uin-salatiga/logs/gunicorn_error.log
+
+# 6. Resource Limits
 LimitNOFILE=65536
 MemoryLimit=6G
 
-# Logging
-StandardOutput=append:/home/chatbot/chatbot-rag-uin-salatiga/logs/gunicorn_access.log
-StandardError=append:/home/chatbot/chatbot-rag-uin-salatiga/logs/gunicorn_error.log
-
 [Install]
+# Otomatis nyala saat server reboot
 WantedBy=multi-user.target

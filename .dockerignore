@@ -14,6 +14,7 @@ __pycache__/
 .env
 .env.*
 tests/.env.test
+tests/
 
 # Abaikan file konfigurasi IDE dan OS
 .vscode/
@@ -31,8 +32,6 @@ requirements-dev.txt
 
 # Abaikan data mentah. Data ini seharusnya diproses oleh script
 # 'ingestion.py' yang terpisah. Tidak perlu ada di image aplikasi.
-data/
-*.pdf
 
 # Abaikan log dan file sementara
 logs/

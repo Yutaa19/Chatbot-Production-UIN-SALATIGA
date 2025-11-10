@@ -1,4 +1,5 @@
 function createMessageElement(content, isUser = false) {
+    const CHATBOT_KEY_ENDPOINT = 'http://127.0.0.1:8000/api/ask';
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${isUser ? 'user' : 'system'}`;
 
@@ -44,7 +45,7 @@ async function sendMessage(event) {
     scrollToBottom();
 
     try {
-        const response = await fetch('/api/ask', {
+        const response = await fetch(CHATBOT_KEY_ENDPOINT, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

@@ -1,18 +1,35 @@
+# --- Web Framework ---
 Flask
+gunicorn
+flask-cors
+gevent
+pydantic-settings
+# --- Environment & Config ---
 python-dotenv
+
+# --- Data & Caching ---
 redis
+psycopg2-binary
+pandas
+
+# --- HTTP & Async ---
+aiohttp
+requests
+
+# --- RAG & AI ---
 qdrant-client
 sentence-transformers
 google-generativeai
-llama-index
-aiohttp
-requests
-gunicorn
-flask-cors
-beautifulsoup4
-psycopg2-binary
-pandas
-llama-index-readers-file
+google-api-core
+google-api-python-client
+
+# --- LlamaIndex (Modular/Modern) ---
 llama-index-core
+llama-index-readers-file
+
+# --- Parsing & Data Ingestion ---
 pymupdf
-spacy
+beautifulsoup4
+fpdf
+
+json

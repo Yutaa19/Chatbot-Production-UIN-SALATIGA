@@ -12,7 +12,7 @@
       <div class="chatbot-header-logo">
         <img src="/static/images/logo uin keren - Diedit.png" alt="Logo UIN Salatiga" class="chatbot-logo" />
         <div>
-          <strong>UINSAGA-AI</strong><br />
+          <strong class="chatbot-judul">UINSAGA-AI</strong><br />
           <span class="chatbot-subtitle">Asisten Resmi UIN Salatiga</span>
         </div>
       </div>
@@ -258,21 +258,225 @@
 }
 
 /* Responsive (Optional) */
-@media (max-width: 480px) {
+@media (max-width: 720px) {
   .chatbot-widget {
-    right: 10px;
-    bottom: 10px;
-  }
-  .chatbot-body {
-    width: calc(100vw - 40px);
-    right: 10px;
-    bottom: 60px;
-  }
+  position: fixed;
+  bottom: 100px;
+  right: 50px;
+  z-index: 9999;
+  font-family: 'Futura Md BT', Arial, sans-serif;
+  
+}
+
+/* Toggle Button */
+.chatbot-toggle {
+  display: flex;
+  align-items: center;
+  background: #EBD181;
+  color: #000;
+  padding: 32px 60px;
+  border-radius: 50px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: none;
+  outline: none;
+  font-weight: bold;
+  font-size: 30px;
+}
+.chatbot-toggle:hover,
+.chatbot-toggle:focus {
+  transform: scale(1.03);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  outline: 2px solid #d4b45a;
+}
+.chatbot-toggle-icon {
+  width: 50px;
+  height: 70px;
+  object-fit: contain;
+  margin-right: 15px;
+}
+
+/* Chat Body */
+.chatbot-body {
+  display: none;
+  position: absolute;
+  bottom: 170px;
+  right: 0;
+  width: 459px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  max-height: 700px;
+  flex-direction: column;
+}
+
+/* Header */
+.chatbot-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #EBD181;
+  color: #000;
+  padding: 28px;
+  border-bottom: 1px solid #ddd;
+}
+.chatbot-header-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.chatbot-logo {
+  height: 84px;
+  width: auto;
+  object-fit: contain;
+}.chatbot-judul {
+  font-size: 32px;
+}
+.chatbot-subtitle {
+  font-size: 18px;
+  opacity: 0.8;
+}
+
+/* Close Button */
+.chatbot-close-btn {
+  background: none;
+  border: none;
+  color: #000;
+  font-size: 48px;
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  padding: 0;
+}
+.chatbot-close-btn:hover,
+.chatbot-close-btn:focus {
+  background: rgba(0, 0, 0, 0.1);
+  outline: 2px solid #d4b45a;
+}
+
+/* Messages Area */
+.chatbot-messages {
+  height: 500px;
+  padding: 32px;
+  overflow-y: auto;
+  background: #f9f9fb;
+  font-size: 24px;
+  line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+}
+.chatbot-welcome {
+  color: #555;
+  text-align: center;
+  margin: 20px 0;
+  font-style: italic;
+}
+
+/* Message Bubbles */
+.chat-message {
+  display: flex;
+  margin: 8px 0;
+}
+.chat-message--user {
+  justify-content: flex-end;
+}
+.chat-message--ai {
+  justify-content: flex-start;
+}
+.chat-bubble {
+  padding: 10px 14px;
+  border-radius: 12px;
+  word-break: break-word;
+  line-height: 1.4;
+  max-width: 85%;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+}
+.chat-bubble--user {
+  background: #EBD181;
+  color: #000;
+}
+.chat-bubble--ai {
+  background: #e0e7ff;
+  color: #333;
+}
+
+/* Input Area */
+.chatbot-input-area {
+  display: flex;
+  padding: 15px;
+  background: white;
+  border-top: 1px solid #eee;
+  gap: 8px;
+}
+.chatbot-input {
+  flex: 1;
+  padding: 14px 24px;
+  border: 1px solid #ccc;
+  border-radius: 20px;
+  outline: none;
+  font-size: 20px;
+  font-family: inherit;
+}
+.chatbot-input:focus {
+  border-color: #EBD181;
+  box-shadow: 0 0 0 2px rgba(235, 209, 129, 0.3);
+}
+.chatbot-send-btn {
+  background: #EBD181;
+  color: #fff;
+  border: none;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+.chatbot-send-btn:hover,
+.chatbot-send-btn:focus {
+  background: #d4b45a;
+  outline: 2px solid #c9a94f;
+}
+
+/* Typing Indicator Animation */
+.typing-indicator {
+  display: flex;
+  padding: 10px 14px;
+}
+.typing-indicator span {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin: 0 1px;
+  background-color: #777;
+  border-radius: 50%;
+  animation: dot-typing 1.5s infinite ease-in-out;
+}
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+@keyframes dot-typing {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
 }
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+
+  const CHATBOT_API_ENDPOINT = 'https://chatbot.uinsalatiga.ac.id/api/ask';
   // DOM Elements
   const toggleBtn = document.getElementById('chatbot-toggle');
   const closeBtn = document.getElementById('close-chat');
@@ -285,15 +489,15 @@ document.addEventListener('DOMContentLoaded', () => {
   let isLoading = false;
 
   // === Event Listeners ===
-// === Event Listeners ===
+ // === Event Listeners ===
 toggleBtn.addEventListener('click', () => {
   const isHidden = window.getComputedStyle(chatBody).display === 'none';
   chatBody.style.display = isHidden ? 'flex' : 'none';
-  if (isHidden) {
+  if (!isHidden) {
     userInput.focus();
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
   }
-  });
+});
 
   closeBtn.addEventListener('click', () => {
     chatBody.style.display = 'none';
@@ -338,13 +542,21 @@ toggleBtn.addEventListener('click', () => {
     const typingEl = addTypingIndicator();
 
     try {
-      const res = await fetch('/api/ask', {
+      // === REVISI UTAMA ===
+      // Gunakan variabel konfigurasi, bukan path relatif
+      const res = await fetch(CHATBOT_API_ENDPOINT, { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: message }),
       });
 
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) {
+        // Berikan pesan error yang lebih spesifik jika 429
+        if (res.status === 429) {
+            throw new Error('RateLimit');
+        }
+        throw new Error(`HTTP ${res.status}`);
+      }
 
       const data = await res.json();
       const answer = data?.answer || 'Maaf, saya tidak dapat menjawab saat ini.';
@@ -374,4 +586,4 @@ toggleBtn.addEventListener('click', () => {
     return typingDiv;
   }
 });
-</script>
+</script> 

@@ -1,6 +1,5 @@
 import re
 import logging
-import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from flask import current_app, g
 import requests

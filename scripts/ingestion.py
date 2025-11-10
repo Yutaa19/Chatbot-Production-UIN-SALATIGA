@@ -315,9 +315,26 @@ if __name__ == "__main__":
     
     # --- KONTROL FILE ANDA ---
     DATA_SOURCES = [
-        {"type": "web_article", "url": "https://uinsalatiga.id/pimpinan/"},
-        {"type": "web_table", "url": "https://pmb.uinsalatiga.ac.id/uang-kuliah-tunggal/"},
-        {"type": "pdf", "path": os.path.join(root_dir, "data", "Rincian UKT UIN Salatiga 2025-2026.pdf")},
+        {"type": "web_article", "url": ""},
+        {"type": "web_article", "url": ""},
+        {"type": "web_article", "url": ""},
+        {"type": "web_article", "url": ""},
+        {"type": "web_article", "url": ""},
+        {"type": "web_article", "url": ""},
+        
+
+        {"type": "web_table", "url": ""},
+        {"type": "web_table", "url": ""},
+        {"type": "web_table", "url": ""},
+        {"type": "web_table", "url": ""},
+
+
+        {"type": "pdf", "path": os.path.join(root_dir, "data", "")},
+        {"type": "pdf", "path": os.path.join(root_dir, "data", "")},
+        {"type": "pdf", "path": os.path.join(root_dir, "data", "")},
+        {"type": "pdf", "path": os.path.join(root_dir, "data", "")},
+        {"type": "pdf", "path": os.path.join(root_dir, "data", "")},
+        {"type": "pdf", "path": os.path.join(root_dir, "data", "")},
     ]
     
     COLLECTION_NAME = settings.RAG.COLLECTION_NAME
@@ -329,15 +346,6 @@ if __name__ == "__main__":
 
     logger.info(f"================ STARTING RAG INGESTION ({COLLECTION_NAME}) ================")
     
-    # --- PENTING: HAPUS KOLEKSI LAMA ---
-    logger.warning(f"PERINGATAN: Menghapus koleksi '{COLLECTION_NAME}' yang ada untuk memulai dari awal yang bersih.")
-    try:
-        client = QdrantClient(url=settings.RAG.QDRANT_URL, api_key=settings.RAG.QDRANT_API_KEY)
-        client.delete_collection(collection_name=COLLECTION_NAME)
-        logger.info(f"Koleksi lama '{COLLECTION_NAME}' telah dihapus.")
-    except Exception as e:
-        logger.info(f"Tidak dapat menghapus koleksi lama (mungkin belum ada): {e}")
-
     all_raw_nodes = []
     
     # === LANGKAH 1: EKSTRAKSI HIBRIDA ===
