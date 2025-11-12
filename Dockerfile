@@ -37,7 +37,8 @@ WORKDIR /app
 
 # (KEAMANAN) Buat grup dan user non-root bernama 'chatbot'
 # Menjalankan aplikasi sebagai root di kontainer adalah praktik buruk.
-RUN groupadd -r chatbot && useradd --no-log-init -r -g chatbot chatbot
+# Tambahkan flag '--create-home' (atau '-m') untuk MEMBUAT folder home
+RUN groupadd -r chatbot && useradd --no-log-init -r -g chatbot --create-home chatbot
 
 # Salin dependencies yang sudah terinstal dari tahap 'builder'
 # Ini adalah inti dari multi-stage build.
@@ -49,7 +50,6 @@ COPY . .
 
 # Berikan kepemilikan file aplikasi ke user 'chatbot'
 RUN chown -R chatbot:chatbot /app
-
 # Ganti ke user non-root
 USER chatbot
 

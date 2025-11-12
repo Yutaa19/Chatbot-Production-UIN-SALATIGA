@@ -20,6 +20,7 @@ requests
 qdrant-client
 sentence-transformers
 google-generativeai
+google-genai
 google-api-core
 google-api-python-client
 
@@ -30,6 +31,3 @@ llama-index-readers-file
 # --- Parsing & Data Ingestion ---
 pymupdf
 beautifulsoup4
-fpdf
-
-json

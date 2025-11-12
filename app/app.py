@@ -28,8 +28,7 @@ def create_app():
              r"/api/*": {
                  # Izinkan HANYA domain-domain ini
                  "origins": [ 
-                     "https://www.uinsalatiga.ac.id",
-                     "http://127.0.0.1:8000"
+                     "https://www.uinsalatiga.ac.id"
                      # Jika ada subdomain lain (misal: fti.uinsalatiga.ac.id),
                      # tambahkan juga ke daftar ini
                  ]
@@ -44,7 +43,7 @@ def create_app():
 
     @app.route('/')
     def widget():
-        return render_template('index.html')
+        return render_template('widget.html')
     if not app.debug and not app.testing:
         os.makedirs('logs', exist_ok=True)
         file_handler = RotatingFileHandler('logs/chatbot.log', maxBytes=10240000, backupCount=10)

@@ -1,5 +1,6 @@
+const CHATBOT_KEY_ENDPOINT = 'http://127.0.0.1:8000/api/ask';
+
 function createMessageElement(content, isUser = false) {
-    const CHATBOT_KEY_ENDPOINT = 'http://127.0.0.1:8000/api/ask';
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${isUser ? 'user' : 'system'}`;
 
