@@ -4,7 +4,7 @@ Chatbot AI resmi Universitas Islam Negeri (UIN) Salatiga yang menjawab pertanyaa
 
 ## Fitur
 - Jawaban berbasis knowledge base resmi UIN
-- Mendukung pertanyaan tentang: visi, misi, logo, bendera, pimpinan, akreditasi, kehidupan kampus
+- Mendukung pertanyaan tentang: Seputar Uin Salatiga
 - Cepat berkat caching Redis
 - Aman dan hemat biaya
 
@@ -12,9 +12,9 @@ Chatbot AI resmi Universitas Islam Negeri (UIN) Salatiga yang menjawab pertanyaa
 - **Backend**: Python Flask + Gunicorn
 - **Vector DB**: Qdrant (self-hosted)
 - **Embedding**: `firqaaa/indo-sentence-bert-base`
-- **LLM**: Google Gemini 2.5 Flash
+- **LLM**: Google Gemini 2.0 Flash-lite
 - **Cache**: Redis
-- **Deployment**: VPS Hostinger (KVM2)
+- **Deployment**: Server Uin
 
 ## Deployment
 Hanya untuk tim IT internal UIN Salatiga.  
